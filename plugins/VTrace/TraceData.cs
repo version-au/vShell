@@ -56,6 +56,7 @@ namespace VShellVTrace
                 case "server": return "Servers";
                 case "pc": return "PCs";
                 case "vdeploy": return "vDeploy";
+                case "vpatch": return "vPatch";
                 case "komodo": return "Komodo";
                 case "proxmox": return "Proxmox";
                 case "ha": return "Home Assistant";

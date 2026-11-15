@@ -3371,3 +3371,5 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 3. With a server: as 0.38.219 (changes, outages, refresh = the server looks, clicks open the browser, notifications, this PC's changes).
 4. Settings > Updates > vSuite apps: vXplorer, vView, vTerm, vPad - no vTrace.
 5. Settings > Plugins > UniFi: no "Account for vTrace's history" block; the rest as before.
+## 0.38.221 - vTrace plugin 2.1.1
+1. With vTrace 0.1.4 reading vPatch: the vTrace widget's / popup's rows from vPatch name their source vPatch (not "vpatch").
