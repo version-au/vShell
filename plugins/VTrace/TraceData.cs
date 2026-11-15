@@ -51,17 +51,25 @@ namespace VShellVTrace
 
         static string File_ { get { return Path.Combine(Folder, "changes.json"); } }
 
-        /// <summary>vTrace has run here (its changes file is there).</summary>
-        public static bool There { get { return File.Exists(File_); } }
+        /// <summary>vTrace has run here (its changes file is there), or a vTrace server is set up.</summary>
+        public static bool There { get { return TraceServer.On || File.Exists(File_); } }
 
         /// <summary>Why the changes couldn't be read, or null.</summary>
-        public static string Error { get { lock (Gate) return _error; } }
+        public static string Error
+        {
+            get
+            {
+                if (TraceServer.On) { VtSnapshot s = TraceServer.Latest; return s.Checked && !s.Ok ? s.Error : null; }
+                lock (Gate) return _error;
+            }
+        }
 
         /// <summary>Every change, newest first (read again if vTrace wrote the file since).</summary>
         public static List<Change> All
         {
             get
             {
+                if (TraceServer.On) return TraceServer.Latest.Changes;
                 lock (Gate)
                 {
                     try
@@ -111,7 +119,8 @@ namespace VShellVTrace
             {
                 case "outage": return "Outages";
                 case "server": return "Servers";
-                case "pc": return "This PC";
+                case "pc": return TraceServer.On ? "PCs" : "This PC";
+                case "vdeploy": return "vDeploy";
                 case "komodo": return "Komodo";
                 case "proxmox": return "Proxmox";
                 case "ha": return "Home Assistant";
@@ -143,6 +152,7 @@ namespace VShellVTrace
         /// </summary>
         public static void OpenApp(string show = null)
         {
+            if (TraceServer.On) { TraceServer.Open(show); return; }
             string exe = Exe();
             if (exe == null) { Questions.Tell(null, "vTrace isn't installed. Install it from Settings > Updates > vSuite apps.", "vTrace"); return; }
             try
@@ -168,6 +178,7 @@ namespace VShellVTrace
         {
             get
             {
+                if (TraceServer.On) return false;      // the server: the refresh button asks it to look now
                 if ((DateTime.UtcNow - _openChecked).TotalSeconds < 2) return _open;
                 bool found = false;
                 EnumWindows((h, l) => { if (GetProp(h, "vTrace.Instance") != IntPtr.Zero) { found = true; return false; } return true; }, IntPtr.Zero);
@@ -182,6 +193,7 @@ namespace VShellVTrace
         {
             get
             {
+                if (TraceServer.On) return TraceServer.Looking;
                 try { return _refresh != null && !_refresh.HasExited; }
                 catch { return false; }
             }
@@ -199,7 +211,7 @@ namespace VShellVTrace
         /// <summary>Once a minute: a check when one is due (not while vTrace is open or a check is going; quietly if it isn't installed).</summary>
         public static void AutoCheck()
         {
-            if (AutoMinutes <= 0 || Refreshing || AppOpen) return;
+            if (TraceServer.On || AutoMinutes <= 0 || Refreshing || AppOpen) return;
             DateTime last = LastLook;
             if (last != DateTime.MinValue && (DateTime.Now - last).TotalMinutes < AutoMinutes - 0.5) return;
             Refresh(true);
@@ -207,6 +219,7 @@ namespace VShellVTrace
 
         static void Refresh(bool quiet)
         {
+            if (TraceServer.On) { TraceServer.LookNow(); return; }
             if (Refreshing) return;
             string exe = Exe();
             if (exe == null) { if (!quiet) Questions.Tell(null, "vTrace isn't installed. Install it from Settings > Updates > vSuite apps.", "vTrace"); return; }
@@ -219,6 +232,7 @@ namespace VShellVTrace
         {
             get
             {
+                if (TraceServer.On) return TraceServer.Latest.Looked;
                 try
                 {
                     string f = Path.Combine(Folder, "looked.txt");
@@ -240,6 +254,16 @@ namespace VShellVTrace
             string age = ago.TotalMinutes < 1 ? "just now" : ago.TotalMinutes < 60 ? (int)ago.TotalMinutes + " min ago" :
                          ago.TotalHours < 24 ? (int)ago.TotalHours + " h ago" : (int)ago.TotalDays + " day" + ((int)ago.TotalDays == 1 ? "" : "s") + " ago";
             return "Checked " + (d.Date == DateTime.Today ? TimeText.Clock(d) : d.ToString("ddd") + " " + TimeText.Clock(d)) + " · " + age;
+        }
+
+        /// <summary>The tip on the "Checked …" line.</summary>
+        public static string RefreshTip
+        {
+            get
+            {
+                return TraceServer.On ? "The vTrace server looks every few minutes by itself - the refresh button asks it to look now."
+                                      : "vTrace isn't open, so nothing new comes in by itself - the refresh button checks now.";
+            }
         }
 
         /// <summary>Last checked over an hour ago (shown in the warning colour).</summary>

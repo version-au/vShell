@@ -3348,3 +3348,18 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
    overview (5 hosts in 2 groups, the summary), events (kind, look, toVShell), Check one host ("checking…" on the next look), the
    colours accepted - and vShell's plugin API check on the DLL (34 vShell types, nothing outside the plugin API). Not tried: loaded
    in vShell itself (bar, popup, widget, notifications) - V's desktop.
+## 0.38.219 - vTrace plugin 2.0.0: the vTrace server
+1. Settings > Plugins > vTrace: vTrace server - Address (http://<the LXC>:8480), App key (vTrace: Options > Sign-in > Apps), Send this
+   PC's changes (on), Send vShell's colours (on), Test: "vTrace 0.1.0 - n changes today". A wrong key: "vTrace didn't take the key …";
+   nothing there: "Couldn't reach vTrace …". (Checked against a vTrace server on this PC with a test key - 2026-11-15.)
+2. The bar module and widget show the server's changes (the last week) within 10 s: outages still going in red with the likely cause
+   and "with n more on <node>", the All / Issues switch, today's chart, "Checked <time> · n min ago" from the server's last look.
+3. The refresh button asks the server to look now (dimmed a few seconds, "Checking for changes…"); the tip says the server looks by
+   itself. A click on a change / an outage / its cause opens <server>/change/<id> in the browser; Open vTrace opens its timeline.
+4. This PC's changes: within a minute of setting it up (then every 15 minutes, and with the refresh button) the server gets the last 30
+   days of Windows updates, installs, drivers, starts / shut-downs (432 on this PC); sending again adds nothing. In vTrace they're under
+   "PCs" with the PC's name. Settings > Plugins > vTrace shows "This PC's changes sent <time> · n new".
+5. Notifications: in vTrace, Options > Notifications > An outage starts or ends = vShell (or Both): an outage shows as an alert, a
+   failed change / a source that can't be read as important, back up as normal (Settings > Notifications > vTrace sets the looks);
+   older events aren't replayed when vShell starts. Show vTrace's notifications off: none.
+6. No server set up: everything as before with the vTrace app (its file, the refresh that runs vTrace.exe --refresh, Check for changes).

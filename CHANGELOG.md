@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.219
+
+- vTrace plugin 2.0.0: shows your vTrace server (its address and an app key in Settings > Plugins > vTrace) - its changes, outages and notifications, the refresh button asks it to look, a click opens the change in your browser - and sends this PC's own changes to it. Without a server it reads the vTrace app as before.
+
 ## 0.38.218 · release
 
 - vTrace plugin 1.5.0: the widget and popup can show only issues (outages and failed changes) - All / Issues at the top, or a setting.

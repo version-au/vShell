@@ -132,7 +132,7 @@ namespace VShellVTrace
             {
                 Text = "", FontFamily = IconUtil.GlyphFont, FontSize = size, Foreground = t.MainAccent, VerticalAlignment = VerticalAlignment.Center,
                 Cursor = busy ? Cursors.Arrow : Cursors.Hand, Opacity = busy ? 0.4 : 0.9, Background = Brushes.Transparent, Padding = new Thickness(4, 2, 2, 2),
-                ToolTip = busy ? "Checking for changes…" : "Check for changes now (vTrace looks once in the background, then closes)"
+                ToolTip = busy ? "Checking for changes…" : TraceServer.On ? "Look for changes now (the vTrace server looks at every source)" : "Check for changes now (vTrace looks once in the background, then closes)"
             };
             g.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
             g.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e)
@@ -206,7 +206,7 @@ namespace VShellVTrace
             {
                 var looked = Txt(t, TraceData.CheckedText(), TraceData.Stale && !TraceData.Refreshing ? StatusColors.Warn : t.FgDim, fs - 2);
                 looked.Margin = new Thickness(0, 0, 0, 6);
-                looked.ToolTip = "vTrace isn't open, so nothing new comes in by itself - the refresh button checks now.";
+                looked.ToolTip = TraceData.RefreshTip;
                 st.Children.Add(looked);
             }
             // outages still going, with their likely cause and the local AI's take: on Issues only (on All they're red rows in the list)
@@ -243,7 +243,7 @@ namespace VShellVTrace
                 }
             }
             if (v.Chart) st.Children.Add(Chart(t, today, fs));
-            if (all.Count == 0) st.Children.Add(Txt(t, closed ? "Nothing yet - refresh to check now, or open vTrace." : "Nothing yet - vTrace looks every few minutes while it runs.", t.FgDim, fs - 1));
+            if (all.Count == 0) st.Children.Add(Txt(t, TraceServer.On ? (TraceServer.Latest.Checked ? "Nothing in the last week yet - set up its sources in vTrace's Options." : "Asking vTrace…") : closed ? "Nothing yet - refresh to check now, or open vTrace." : "Nothing yet - vTrace looks every few minutes while it runs.", t.FgDim, fs - 1));
             else if (listed.Count == 0) st.Children.Add(Txt(t, "No issues - nothing went down or failed.", t.FgDim, fs - 1));
             // the same change again and again (a file copied 4 times in a minute) is one row, "×4"
             var rows = new List<Tuple<Change, int>>();
@@ -403,7 +403,7 @@ namespace VShellVTrace
                 tip = "vTrace: " + today.Count + " change" + (today.Count == 1 ? "" : "s") + " today" + (today.Count > 0 ? "\nLatest: " + today[0].Title + " (" + TimeText.Clock(today[0].When) + ")" : "") + "\nClick for the latest";
             }
             bool closed = !TraceData.AppOpen, busy = TraceData.Refreshing;
-            if (closed && TraceData.Error == null) tip += "\n" + TraceData.CheckedText() + " (vTrace isn't open - the refresh button checks now)";
+            if (closed && TraceData.Error == null) tip += "\n" + TraceData.CheckedText() + (TraceServer.On ? " (the refresh button asks the server to look now)" : " (vTrace isn't open - the refresh button checks now)");
             bool hide = _cfg.HideIfNone && TraceData.Error == null && down.Count == 0 && today.Count == 0;
             string sig = text + "|" + hide + "|" + tip + "|" + closed + "|" + busy;
             if (_popup != null && _popup.IsOpen)
