@@ -1,0 +1,8 @@
+bin/
+obj/
+dist/
+*.user
+# Sign in with Google's OAuth client (stamped into vShell.Mail.dll at build time) - never in the repository
+plugins/Mail/google-client.txt
+# this machine's notes for Claude Code (working folder, remotes)
+CLAUDE.local.md

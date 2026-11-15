@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A vShell plugin made only with the plugin API. It keeps its own version (people already have 2.0.0 - a lower one would never update). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>vShell.UptimeKuma</AssemblyName>
+    <RootNamespace>UptimeKuma</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Version>2.0.1</Version>
+    <Nullable>disable</Nullable>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

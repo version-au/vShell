@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>vShell.PeaNUT</AssemblyName>
+    <RootNamespace>VShellPeanut</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Version>2.0.2</Version>
+    <Product>PeaNUT for vShell</Product>
+    <Authors>V</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

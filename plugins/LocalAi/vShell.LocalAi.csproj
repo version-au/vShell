@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Local AI plugin (Lemonade, Ollama, LM Studio and other OpenAI-style servers: status on a bar and in a widget, questions from the
+       run box, notifications; vTrace reads its settings), made only with the plugin API. It keeps its own version. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>vShell.LocalAi</AssemblyName>
+    <RootNamespace>LocalAi</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Version>1.0.1</Version>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <DebugType>none</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

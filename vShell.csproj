@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- WinForms is only used for the standard colour-picker dialog -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>vShell</AssemblyName>
+    <RootNamespace>vShell</RootNamespace>
+    <StartupObject>vShell.Program</StartupObject>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>vshell.ico</ApplicationIcon>
+    <Version>0.38.218</Version>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- the same icon for the windows (settings, splash) -->
+    <Resource Include="vshell.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- plugins are projects of their own (plugins\<Name>\vShell.<Name>.csproj), built into separate DLLs -->
+    <Compile Remove="plugins\**" />
+    <None Remove="plugins\**" />
+    <Page Remove="plugins\**" />
+    <!-- plugins you add yourself from a file (plugins-extra\<Name>), never built by build.cmd or put in a release -->
+    <Compile Remove="plugins-extra\**" />
+    <None Remove="plugins-extra\**" />
+    <Page Remove="plugins-extra\**" />
+    <!-- the suite's shared library (git submodule vSuite.Core, shared with vXplorer and vView): a project of its own -->
+    <Compile Remove="vSuite.Core\**" />
+    <None Remove="vSuite.Core\**" />
+    <Page Remove="vSuite.Core\**" />
+    <EmbeddedResource Remove="vSuite.Core\**" />
+    <Resource Remove="vSuite.Core\**" />
+    <!-- first-party plugins are built for one exact vShell version, so they may use vShell's internal classes -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- the terminal is vTerm, a vSuite app of its own (since 0.38.194 - no WebView2 / SSH.NET here any more) -->
+    <ProjectReference Include="vSuite.Core\vSuite.Core\vSuite.Core.csproj" />
+  </ItemGroup>
+
+</Project>

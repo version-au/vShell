@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Fans plugin (your fans' speeds as tiles or graphs, and a notification when one stops), made only with the plugin API. It keeps its own version. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>vShell.Fans</AssemblyName>
+    <RootNamespace>VShellFans</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Version>1.0.10</Version>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <DebugType>none</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,625 @@
+# vShell plugin API 2 (vShell 0.38.217)
+BarInfo (class)
+BarInfo :: Brush Outline { get; }
+BarInfo :: IntPtr Handle { get; }
+BarInfo :: IntPtr Monitor { get; }
+BarInfo :: Theme Theme { get; }
+BarInfo :: bool BehindFullScreen { get; }
+BarInfo :: double BorderThickness { get; }
+BarInfo :: double CornerRadius { get; }
+BarInfo :: int Bottom { get; }
+BarInfo :: int Left { get; }
+BarInfo :: int Right { get; }
+BarInfo :: int Top { get; }
+BarInfo :: new()
+BarInfo :: string Edge { get; }
+BarManager :: BarSettings Settings { get; }
+BarManager :: History HistoryFor(string)
+BarManager :: List<BarInfo> Bars()
+BarManager :: event Action BarsChanged
+BarManager :: void OpenSettings(BarPlacement)
+BarManager :: void SaveSoon()
+BarManager :: void SettingsChangedAll()
+BarManager :: void ShowPopup(PopupWindow)
+BarSettings :: SettingsBag Integration(string)
+BarSettings :: T IntegrationValue<1>(string, string, T)
+BarSettings :: WidgetStyle WidgetStyle { get; set; }
+BarSettings :: bool UsesModule(string)
+BarSettings :: static string ConfigDir { get; }
+DownDelay (static class)
+DownDelay :: static UpResult Up(string)
+DownDelay :: static bool IsDown(string)
+DownDelay :: static void Down(string, int, Action)
+DownDelay :: static void Tick()
+FormField (class)
+FormField :: bool Checked { get; set; }
+FormField :: bool IsBool
+FormField :: bool IsPassword
+FormField :: new(string, string)
+FormField :: static FormField Check(string, bool)
+FormField :: static FormField Combo(string, string, string[])
+FormField :: static FormField Password(string, string)
+FormField :: string Hint
+FormField :: string Label
+FormField :: string Value
+FormField :: string[] Choices
+FormWindow (class : Window)
+FormWindow :: static bool Ask(Window, string, List<FormField>)
+History :: int Count { get; }
+History :: void Add(double)
+HwInfo :: static HwReading Find(string)
+HwInfo :: static List<HwReading> All { get; }
+HwInfo :: static bool Available { get; }
+HwInfo :: static bool IsLhm { get; }
+HwInfo :: static string MakeKey(string, string)
+HwInfo :: static string SourceName { get; }
+HwReading (class)
+HwReading :: bool IsTemperature { get; }
+HwReading :: double Value
+HwReading :: int Index
+HwReading :: new()
+HwReading :: string Key { get; }
+HwReading :: string Label
+HwReading :: string Sensor
+HwReading :: string Text
+HwReading :: string Unit
+IMediaHelper (interface)
+IMediaHelper :: abstract bool Ready(BarSettings)
+IMediaHelper :: abstract void Fill(MediaInfo, BarSettings)
+IMediaHelper :: abstract void Send(MediaInfo, BarSettings, string)
+IMediaHelper :: string Name { get; }
+IModuleHost (interface)
+IModuleHost :: IntPtr Handle { get; }
+IModuleHost :: IntPtr MonitorHandle { get; }
+IModuleHost :: Theme Theme { get; }
+IModuleHost :: abstract void ContentChanged()
+IModuleHost :: abstract void OpenSettings()
+IModuleHost :: bool FullWidth { get; }
+IModuleHost :: bool IsWidget { get; }
+IModuleHost :: bool PopupsBelow { get; }
+IModuleHost :: double HostHeight { get; }
+IMultiRow (interface)
+IMultiRow :: int RowCount { get; }
+INoteFeed (interface)
+INoteFeed :: FrameworkElement View { get; }
+INoteFeed :: abstract void AddMenuItems(ContextMenu, DependencyObject)
+INoteFeed :: abstract void FocusCompose()
+INoteFeed :: abstract void SetLook(Theme, NoteLook, double)
+INoteFeed :: abstract void StopTyping()
+IPlugin (interface)
+IPlugin :: abstract void Load(PluginHost)
+IPlugin :: abstract void Unload()
+ITypingModule (interface)
+ITypingModule :: abstract void StopTyping()
+IWeatherSource (interface)
+IWeatherSource :: abstract Task<WeatherReport> FetchAsync(ModuleConfig)
+IWeatherSource :: abstract bool IsSetUp(ModuleConfig)
+IWeatherSource :: abstract double Minutes(ModuleConfig)
+IWeatherSource :: abstract string Key(ModuleConfig)
+IWeatherSource :: abstract string Place(ModuleConfig)
+IWeatherSource :: string Id { get; }
+IWeatherSource :: string Name { get; }
+IWeatherSource :: string SetUpText { get; }
+IconUtil :: static readonly FontFamily GlyphFont
+InfoModule (class : Border)
+InfoModule :: bool Clickable { get; }
+InfoModule :: bool HasGauges { get; }
+InfoModule :: bool TallTile { get; }
+InfoModule :: bool TileMeter { get; }
+InfoModule :: bool UsesGraph { get; }
+InfoModule :: bool Wheelable { get; }
+InfoModule :: double GraphScale { get; }
+InfoModule :: protected Theme ModTheme
+InfoModule :: protected abstract void Read(InfoModule.Reading, bool)
+InfoModule :: protected new(BarManager, IModuleHost, ModuleConfig)
+InfoModule :: protected readonly BarManager Mgr
+InfoModule :: protected readonly IModuleHost Bar
+InfoModule :: protected readonly ModuleConfig Cfg
+InfoModule :: protected readonly TextBlock Txt
+InfoModule :: protected string Prefix(string)
+InfoModule :: protected virtual void Decorate(TextBlock)
+InfoModule :: protected virtual void OnClick()
+InfoModule :: protected virtual void OnThemed(Theme)
+InfoModule :: protected virtual void OnWheel(int)
+InfoModule :: static string Bytes(double)
+InfoModule :: static string Duration(TimeSpan)
+InfoModule :: static string Speed(double, bool)
+InfoModule :: string GraphStyle { get; }
+InfoModule :: void Update(bool)
+InfoModule+Reading (class)
+InfoModule+Reading :: bool AutoScale
+InfoModule+Reading :: bool Hide
+InfoModule+Reading :: double Percent
+InfoModule+Reading :: double Percent2
+InfoModule+Reading :: double ScaleMin
+InfoModule+Reading :: new()
+InfoModule+Reading :: string Detail
+InfoModule+Reading :: string Icon
+InfoModule+Reading :: string Label
+InfoModule+Reading :: string Number
+InfoModule+Reading :: string Text
+InfoModule+Reading :: string Tip
+InfoModule+Reading :: string Unit
+JsonValue (static class)
+JsonValue :: static bool Bool(JsonElement, string, bool?)
+JsonValue :: static double Num(JsonElement, string)
+JsonValue :: static string Str(JsonElement, string)
+ListEditorWindow`1 (class : Window)
+ListEditorWindow`1 :: Button AddActionButton(string, Action<ListEditorWindow<T>>)
+ListEditorWindow`1 :: List<T> Items { get; }
+ListEditorWindow`1 :: List<T> SelectedItems { get; }
+ListEditorWindow`1 :: new(string, string, List<T>, Func<T, string>, Func<Window, T, bool>, Action)
+ListEditorWindow`1 :: void AddAction(string, Action<ListEditorWindow<T>>)
+ListEditorWindow`1 :: void Changed(int)
+ListEditorWindow`1 :: void Refresh(int)
+Log (static class)
+Log :: static void Flush()
+Log :: static void Write(string)
+MediaInfo (class)
+MediaInfo :: DateTime PosAt
+MediaInfo :: bool Available
+MediaInfo :: bool CanSeek
+MediaInfo :: bool HasProgress { get; }
+MediaInfo :: bool HasSession
+MediaInfo :: bool HelperOnly
+MediaInfo :: bool Playing { get; }
+MediaInfo :: byte[] Art
+MediaInfo :: double Duration
+MediaInfo :: double Position
+MediaInfo :: double PositionNow { get; }
+MediaInfo :: int ArtVersion
+MediaInfo :: int Status
+MediaInfo :: new()
+MediaInfo :: static string Time(double)
+MediaInfo :: string Album
+MediaInfo :: string App
+MediaInfo :: string Artist
+MediaInfo :: string HelperSession
+MediaInfo :: string Source
+MediaInfo :: string Title
+MediaSession :: static int NewArtVersion()
+MetricView (class : FrameworkElement)
+MetricView :: Brush CenterBrush
+MetricView :: Brush Fill
+MetricView :: Brush Fill2
+MetricView :: Brush Track
+MetricView :: Brush WarnFill
+MetricView :: History Data
+MetricView :: History Data2
+MetricView :: Typeface Face
+MetricView :: bool NoTrack
+MetricView :: bool WarnBelow
+MetricView :: double Blend
+MetricView :: double CenterSize
+MetricView :: double FullScale
+MetricView :: double GraphH
+MetricView :: double GraphW
+MetricView :: double Value
+MetricView :: double Value2
+MetricView :: double WarnAt
+MetricView :: new()
+MetricView :: protected virtual Size MeasureOverride(Size)
+MetricView :: protected virtual void OnRender(DrawingContext)
+MetricView :: static double ScaleFor(History, History, double, int?)
+MetricView :: string Center
+MetricView :: string GraphStyle
+MetricView :: void ApplyLook(ModuleConfig, Theme)
+ModuleConfig :: Nullable<bool> ShownTwoLines { get; set; }
+ModuleConfig :: SettingsBag Bag { get; }
+ModuleConfig :: bool AutoScale { get; set; }
+ModuleConfig :: bool HideIfNone { get; set; }
+ModuleConfig :: bool ShowText { get; set; }
+ModuleConfig :: bool ShownLines2 { get; }
+ModuleConfig :: bool TileNames { get; set; }
+ModuleConfig :: double RangeMax { get; set; }
+ModuleConfig :: double ShownFontSize { get; set; }
+ModuleConfig :: double ShownGraphScale { get; set; }
+ModuleConfig :: int GraphSpan { get; set; }
+ModuleConfig :: string Color { get; set; }
+ModuleConfig :: string Color2 { get; set; }
+ModuleConfig :: string Id { get; set; }
+ModuleConfig :: string Style { get; set; }
+ModuleConfig :: string TextSize { get; set; }
+ModuleConfig :: string TileLayout { get; set; }
+ModuleConfig :: string Title { get; set; }
+ModuleConfig :: string Type { get; set; }
+ModuleConfig :: string WeatherEntity { get; set; }
+ModulePics :: static Border Dot(Brush, double)
+ModulePics :: static Border Meter(Theme, double, double, double, Brush)
+ModulePics :: static Border Square(Brush, double, double?)
+ModulePics :: static Brush Shade(Theme, int)
+ModulePics :: static FrameworkElement Pair(Theme, string, string)
+ModulePics :: static Grid Badge(UIElement, string, Brush, double)
+ModulePics :: static Shape Spark(double, double, Brush, double[], bool?)
+ModulePics :: static StackPanel Col(double, UIElement[])
+ModulePics :: static StackPanel Row(double, UIElement[])
+ModulePics :: static TextBlock G(int, Brush, double)
+ModulePics :: static TextBlock T(Theme, string, Brush, double, bool?)
+ModulePics :: static readonly double[] Wave1
+ModulePics :: static readonly double[] Wave2
+ModuleTypes :: static readonly string[] NotifyLevels
+ModuleTypes :: static readonly string[] TileLayouts
+ModuleTypes :: static string Display(string)
+ModuleTypes :: static string ShortName(string)
+ModuleVisibility (static class)
+ModuleVisibility :: static bool Covered(IModuleHost)
+ModuleVisibility :: static bool Locked { get; }
+NoteFeedStore (class)
+NoteFeedStore :: Action Prepare
+NoteFeedStore :: Action<SettingsWindow.SettingsPage, ModuleConfig> Settings
+NoteFeedStore :: Action<bool> Use
+NoteFeedStore :: Func<ModuleConfig, Action, Action<TextBox>, Action, INoteFeed> Create
+NoteFeedStore :: new()
+NoteFeedStore :: string Id
+NoteLook (class)
+NoteLook :: Brush Accent
+NoteLook :: Brush CodeBg
+NoteLook :: Brush Dim
+NoteLook :: Brush Fg
+NoteLook :: Brush Line
+NoteLook :: FontFamily Font
+NoteLook :: FontFamily Mono
+NoteLook :: double Size
+NoteLook :: new()
+NoteRender :: static Brush Contrast(Brush)
+NoteRender :: static void Open(string)
+Notify :: event Action<NotifyItem> ItemRead
+Notify :: static NotifyItem Post(string, string, string, string, NotifyLevel, bool, string, string, bool, DateTime)
+Notify :: static NotifyItem Post(string, string, string, string, NotifyLevel, bool?, string?)
+Notify :: static NotifyItem Post(string, string, string, string, bool, bool?)
+Notify :: static NotifyLevel KindOf(string)
+Notify :: static readonly Dictionary<string, NotifyLevel> Kinds
+Notify :: static void MarkReadByRef(string)
+NotifyCards :: static ImageSource Picture(string, int)
+NotifyItem (class)
+NotifyItem :: DateTime At { get; set; }
+NotifyItem :: NotifyLevel Kind { get; }
+NotifyItem :: bool Bad { get; set; }
+NotifyItem :: bool Keep
+NotifyItem :: bool Read { get; set; }
+NotifyItem :: int Count { get; set; }
+NotifyItem :: long Id { get; set; }
+NotifyItem :: new()
+NotifyItem :: string Detail { get; set; }
+NotifyItem :: string Image { get; set; }
+NotifyItem :: string Level { get; set; }
+NotifyItem :: string Ref { get; set; }
+NotifyItem :: string Source { get; set; }
+NotifyItem :: string Title { get; set; }
+NotifyItem :: string TitleShown { get; }
+NotifyItem :: string Url { get; set; }
+NotifyLevel (enum : int)
+NotifyLevel :: const NotifyLevel Alert = 2
+NotifyLevel :: const NotifyLevel Important = 1
+NotifyLevel :: const NotifyLevel Normal = 0
+Palette :: static void RaiseChanged()
+Palette+Source (delegate : MulticastDelegate)
+Palette+Source :: new(object, IntPtr)
+Palette+Source :: virtual IAsyncResult BeginInvoke(BarSettings, List<PaletteCommand>, AsyncCallback, object)
+Palette+Source :: virtual void EndInvoke(IAsyncResult)
+Palette+Source :: virtual void Invoke(BarSettings, List<PaletteCommand>)
+PaletteCommand (class)
+PaletteCommand :: Func<double, Task<string>> Run
+PaletteCommand :: bool Ask
+PaletteCommand :: bool Opens
+PaletteCommand :: double Max
+PaletteCommand :: double Min
+PaletteCommand :: int Boost
+PaletteCommand :: new()
+PaletteCommand :: static bool IsWorked(string, ref string)
+PaletteCommand :: static string Worked(string)
+PaletteCommand :: string Detail
+PaletteCommand :: string Glyph
+PaletteCommand :: string Key { get; }
+PaletteCommand :: string Number
+PaletteCommand :: string Source
+PaletteCommand :: string Title
+PaletteCommand :: string TitleWith(double)
+PaletteCommand :: string Words
+Pills (static class)
+Pills :: static Border Make(Theme, string, string, string, bool, Action, bool?)
+Pills :: static double Radius { get; }
+Pills :: static void Configure(BarSettings)
+PluginApi (static class)
+PluginApi :: const int Version = 2
+PluginApi :: static int Of(Version)
+PluginHost (class)
+PluginHost :: BarManager Manager { get; }
+PluginHost :: int ApiVersion { get; }
+PluginHost :: string Name { get; }
+PluginHost :: void AddBang(string, Func<string, string, BarSettings, RunAction>, Action<RunPanel, RunAction>, Func<BarSettings, string>)
+PluginHost :: void AddCardLinks(Func<string, bool>)
+PluginHost :: void AddCommandLine(string, Action<string[]>)
+PluginHost :: void AddCommands(string, Palette.Source)
+PluginHost :: void AddIntegration(string, Action<SettingsWindow.SettingsPage>)
+PluginHost :: void AddMediaHelper(IMediaHelper)
+PluginHost :: void AddModule(PluginModule)
+PluginHost :: void AddNoteStore(NoteFeedStore)
+PluginHost :: void AddNotifications(Action<SettingsWindow.SettingsPage>)
+PluginHost :: void AddNotifyKind(string, NotifyLevel)
+PluginHost :: void AddNotifySource(string)
+PluginHost :: void AddRunBoxDrop(Action<FrameworkElement, Action<bool, string>, Action<List<string>>>)
+PluginHost :: void AddRunText(string[], Func<string, BarSettings, RunAction>, Action<RunPanel, RunAction>)
+PluginHost :: void AddWatcher(string, Action<BarSettings>)
+PluginHost :: void AddWeatherSource(IWeatherSource, Action<SettingsWindow.SettingsPage, ModuleConfig>)
+PluginHost :: void OnPaletteOpening(Action<BarSettings>)
+PluginHost :: void OnSettings(Action<BarSettings>)
+PluginHost :: void SetUpWhen(Func<BarSettings, bool>)
+PluginHttp (static class)
+PluginHttp :: static HttpClient Client(string, bool?, int?, bool?)
+PluginHttp :: static Task<HttpResponseMessage> GetFollowAsync(HttpClient, string, IDictionary<string, string>?, CancellationToken?)
+PluginHttp :: static Task<string> GetStringAsync(HttpClient, string, IDictionary<string, string>?, CancellationToken?)
+PluginModule (class)
+PluginModule :: Action<SettingsWindow.SettingsPage, ModuleConfig> Settings
+PluginModule :: Func<BarManager, IModuleHost, ModuleConfig, FrameworkElement> Create
+PluginModule :: Func<BarSettings, string> Needs
+PluginModule :: Func<Theme, FrameworkElement> BarPicture
+PluginModule :: Func<Theme, FrameworkElement> WidgetPicture
+PluginModule :: Size WidgetSize
+PluginModule :: bool HasPopup
+PluginModule :: bool InWidget
+PluginModule :: bool OnBar
+PluginModule :: new()
+PluginModule :: string Blurb
+PluginModule :: string Display
+PluginModule :: string Glyph
+PluginModule :: string Group
+PluginModule :: string ShortName
+PluginModule :: string Type
+Poller (class)
+Poller :: DateTime LastPoll { get; }
+Poller :: TimeSpan Fast { get; set; }
+Poller :: TimeSpan Slow { get; set; }
+Poller :: TimeSpan WantedFor { get; set; }
+Poller :: bool Running { get; }
+Poller :: bool Wanted { get; }
+Poller :: new(string, Func<Task>, TimeSpan, TimeSpan)
+Poller :: void Dispose()
+Poller :: void PollNow()
+Poller :: void Start()
+Poller :: void Stop()
+Poller :: void Want()
+PopupWindow :: bool IsOpen { get; }
+PopupWindow :: bool Pinned { get; set; }
+PopupWindow :: double ContentRoom()
+PopupWindow :: new(BarManager, IModuleHost, FrameworkElement, Theme, FrameworkElement)
+PopupWindow :: void CloseSafe()
+PopupWindow :: void SetContent(FrameworkElement)
+PopupWindow :: void UseWidgetStyle(Theme, WidgetStyle)
+PromptWindow (class : Window)
+PromptWindow :: static string Ask(Window, string, string, string)
+PromptWindow :: static string AskWithOptions(Window, string, string, string, string[], bool[], string, string?)
+Questions (static class)
+Questions :: static MessageBoxResult Ask(Window, string, string, MessageBoxButton, MessageBoxImage, MessageBoxResult)
+Questions :: static MessageBoxResult YesNo(Window, string, string)
+Questions :: static MessageBoxResult YesNo(Window, string, string, MessageBoxImage)
+Questions :: static void Own(Window, Window)
+Questions :: static void Tell(Window, string, string)
+Questions :: static void Tell(Window, string, string, MessageBoxImage)
+RunAction (class)
+RunAction :: new()
+RunAction :: string Display
+RunAction :: string Fallback
+RunAction :: string Kind
+RunAction :: string Query
+RunAction :: string Target
+RunPanel :: BarSettings Settings { get; }
+RunPanel :: RunPanel.Row AddRow(string, string, string, Action, string)
+RunPanel :: Theme Theme { get; }
+RunPanel :: bool Held { get; }
+RunPanel :: int Selected { get; }
+RunPanel :: readonly Dictionary<string, object> PluginState
+RunPanel :: static void Open(string)
+RunPanel :: string Text { get; }
+RunPanel :: void AddElement(UIElement)
+RunPanel :: void Close()
+RunPanel :: void Hold()
+RunPanel :: void Redraw()
+RunPanel :: void Remember(string)
+RunPanel :: void Select(int)
+RunPanel :: void Status(string)
+RunPanel+Row :: Border View
+RunParser :: static RunAction Parse(string, BarSettings)
+Secret (static class)
+Secret :: static bool IsProtected(string)
+Secret :: static string Protect(string)
+Secret :: static string Unprotect(string)
+SettingsBag (class)
+SettingsBag :: T Get<1>(string, T)
+SettingsBag :: T Live<1>(string, Func<T>)
+SettingsBag :: bool Has(string)
+SettingsBag :: int Count { get; }
+SettingsBag :: new()
+SettingsBag :: string GetSecret(string)
+SettingsBag :: void Put(string, JsonElement)
+SettingsBag :: void Remove(string)
+SettingsBag :: void Set<1>(string, T)
+SettingsBag :: void SetSecret(string, string)
+SettingsBag+Converter (class : JsonConverter<SettingsBag>)
+SettingsBag+Converter :: new()
+SettingsBag+Converter :: virtual SettingsBag Read(ref Utf8JsonReader, Type, JsonSerializerOptions)
+SettingsBag+Converter :: virtual void Write(Utf8JsonWriter, SettingsBag, JsonSerializerOptions)
+SettingsWindow+SettingsPage (class)
+SettingsWindow+SettingsPage :: BarSettings Settings { get; }
+SettingsWindow+SettingsPage :: Button Btn(string, Action, bool?)
+SettingsWindow+SettingsPage :: Button Button(string, string, Action, bool?)
+SettingsWindow+SettingsPage :: CheckBox Check(string, Func<bool>, Action<bool>)
+SettingsWindow+SettingsPage :: PasswordBox Secret(string, string, Func<string>, Action<string>, string?)
+SettingsWindow+SettingsPage :: TextBlock Txt(string, string, double, bool?)
+SettingsWindow+SettingsPage :: Window Window { get; }
+SettingsWindow+SettingsPage :: bool IsWidget { get; }
+SettingsWindow+SettingsPage :: bool Loading { get; }
+SettingsWindow+SettingsPage :: readonly StackPanel Panel
+SettingsWindow+SettingsPage :: void Add(UIElement)
+SettingsWindow+SettingsPage :: void Changed()
+SettingsWindow+SettingsPage :: void Color(string, Func<string>, Action<string>, bool, bool, string?)
+SettingsWindow+SettingsPage :: void Combo(string, string[], Func<string>, Action<string>)
+SettingsWindow+SettingsPage :: void Delay(Func<int>, Action<int>)
+SettingsWindow+SettingsPage :: void GraphLook(ModuleConfig)
+SettingsWindow+SettingsPage :: void GraphLook(ModuleConfig, string)
+SettingsWindow+SettingsPage :: void GraphSettings(ModuleConfig, bool, Action)
+SettingsWindow+SettingsPage :: void Header(string)
+SettingsWindow+SettingsPage :: void Kind(string, string)
+SettingsWindow+SettingsPage :: void ListButton(string, Action)
+SettingsWindow+SettingsPage :: void Note(string)
+SettingsWindow+SettingsPage :: void NotifySection(string, bool, string)
+SettingsWindow+SettingsPage :: void Number(string, Func<double>, Action<double>)
+SettingsWindow+SettingsPage :: void OpenPlugin(string, string?)
+SettingsWindow+SettingsPage :: void Redraw()
+SettingsWindow+SettingsPage :: void Row(string, UIElement, bool?, string?)
+SettingsWindow+SettingsPage :: void Section(string)
+SettingsWindow+SettingsPage :: void Slider(string, double, double, Func<double>, Action<double>)
+SettingsWindow+SettingsPage :: void Test(Action, Func<Task<KeyValuePair<bool, string>>>)
+SettingsWindow+SettingsPage :: void Text(string, Func<string>, Action<string>, string?)
+SettingsWindow+SettingsPage :: void Title(ModuleConfig, string)
+StatusColors (static class)
+StatusColors :: static Brush Of(NotifyLevel)
+StatusColors :: static readonly Brush Bad
+StatusColors :: static readonly Brush Good
+StatusColors :: static readonly Brush Warn
+TermOpen (static class)
+TermOpen :: static TerminalView Terminal(BarManager)
+TermOpen :: static string DockerShell(string)
+TermOpen :: static void Host(BarManager, string, string, string, string)
+TermOpen :: static void Host(BarManager, string, string, string, string, string)
+TermSsh :: static TermConnection Find(BarSettings, string)
+Theme (class)
+Theme :: Brush MakeBg(int)
+Theme :: Brush[] DotBrushes
+Theme :: Color Bg2Color
+Theme :: Color BgColor
+Theme :: CornerRadius Corner
+Theme :: FontFamily Font
+Theme :: SolidColorBrush ActiveBg
+Theme :: SolidColorBrush Bg
+Theme :: SolidColorBrush Fg
+Theme :: SolidColorBrush FgDim
+Theme :: SolidColorBrush Hover
+Theme :: SolidColorBrush MainAccent
+Theme :: SolidColorBrush PopupBg
+Theme :: SolidColorBrush Resolve(string, SolidColorBrush)
+Theme :: SolidColorBrush SecondaryAccent
+Theme :: SolidColorBrush Track
+Theme :: SolidColorBrush Warn(string)
+Theme :: Theme ForModule(ModuleConfig)
+Theme :: Theme WithAccent(SolidColorBrush)
+Theme :: Theme WithFontSize(double)
+Theme :: bool Gradient
+Theme :: const double WarnFade = 20
+Theme :: const string OldSlotMain = "@accent"
+Theme :: const string OldSlotSecondary = "@spare"
+Theme :: const string SlotMain = "@main"
+Theme :: const string SlotSecondary = "@secondary"
+Theme :: const string SlotText = "@text"
+Theme :: double FontSize
+Theme :: double Radius
+Theme :: int GradientAngle
+Theme :: new()
+Theme :: static Color Parse(string, Color)
+Theme :: static SolidColorBrush Faded(SolidColorBrush, int)
+Theme :: static SolidColorBrush Shade(Brush)
+Theme :: static Theme From(BarSettings, BarPlacement)
+Theme :: static Theme From(BarSettings, double, double)
+Theme :: static bool Crossed(double, bool, double, bool)
+Theme :: static bool IsSlot(string)
+Theme :: static bool TryParse(string, ref Color)
+ThemeSlots :: static string Migrate(string)
+TilesModule (class : Border, IMultiRow)
+TilesModule :: abstract void Update()
+TilesModule :: int RowCount { get; }
+TilesModule :: protected Brush FillBrush()
+TilesModule :: protected TilesModule.Tile AddTile(bool, bool, Action)
+TilesModule :: protected abstract void BuildTiles()
+TilesModule :: protected new(BarManager, IModuleHost, ModuleConfig)
+TilesModule :: protected readonly BarManager Mgr
+TilesModule :: protected readonly IModuleHost Bar
+TilesModule :: protected readonly List<TilesModule.Tile> Tiles
+TilesModule :: protected readonly ModuleConfig Cfg
+TilesModule :: protected readonly Theme T
+TilesModule :: protected static void SetDot(TilesModule.Tile, Brush)
+TilesModule :: protected static void SetText(TilesModule.Tile, string, Brush, string, bool?)
+TilesModule :: protected void Build()
+TilesModule :: protected void Rebuild()
+TilesModule+Tile (class)
+TilesModule+Tile :: Action Click
+TilesModule+Tile :: Border Root
+TilesModule+Tile :: Ellipse Dot
+TilesModule+Tile :: MetricView Meter
+TilesModule+Tile :: TextBlock Text
+TilesModule+Tile :: bool Settled
+TilesModule+Tile :: new()
+TimeText (static class)
+TimeText :: static bool Use24
+TimeText :: static string Ago(DateTime)
+TimeText :: static string AgoLocal(DateTime)
+TimeText :: static string Clock(DateTime, bool?)
+TimeText :: static string Day(DateTime)
+TimeText :: static string Full(DateTime, bool?)
+TimeText :: static string Stamp(DateTime, bool?)
+UpResult (enum : int)
+UpResult :: const UpResult Cancelled = 1
+UpResult :: const UpResult None = 0
+UpResult :: const UpResult WasNotified = 2
+VShellPluginAttribute (class : Attribute)
+VShellPluginAttribute :: new(string, string)
+VShellPluginAttribute :: string Adds { get; set; }
+VShellPluginAttribute :: string Author { get; set; }
+VShellPluginAttribute :: string Description { get; set; }
+VShellPluginAttribute :: string Glyph { get; set; }
+VShellPluginAttribute :: string Group { get; set; }
+VShellPluginAttribute :: string Id { get; }
+VShellPluginAttribute :: string Name { get; }
+VShellPluginAttribute :: string Types { get; set; }
+WeatherDay (class)
+WeatherDay :: DateTime Date
+WeatherDay :: WeatherKind Kind
+WeatherDay :: double High
+WeatherDay :: double Low
+WeatherDay :: int RainChance
+WeatherDay :: new()
+WeatherKind (enum : int)
+WeatherKind :: const WeatherKind Clear = 1
+WeatherKind :: const WeatherKind Cloudy = 3
+WeatherKind :: const WeatherKind Drizzle = 5
+WeatherKind :: const WeatherKind Fog = 4
+WeatherKind :: const WeatherKind Hail = 9
+WeatherKind :: const WeatherKind PartlyCloudy = 2
+WeatherKind :: const WeatherKind Rain = 6
+WeatherKind :: const WeatherKind Sleet = 7
+WeatherKind :: const WeatherKind Snow = 8
+WeatherKind :: const WeatherKind Thunder = 10
+WeatherKind :: const WeatherKind Unknown = 0
+WeatherKind :: const WeatherKind Windy = 11
+WeatherReport (class)
+WeatherReport :: DateTime Fetched
+WeatherReport :: List<WeatherDay> Days
+WeatherReport :: WeatherKind Kind
+WeatherReport :: bool IsDay
+WeatherReport :: double Feels
+WeatherReport :: double Humidity
+WeatherReport :: double Temp
+WeatherReport :: double Wind
+WeatherReport :: new()
+WeatherReport :: string Condition
+WeatherReport :: string Error
+WeatherReport :: string Place
+WeatherReport :: string Source
+WeatherReport :: string TempUnit
+WeatherReport :: string WindUnit
+WeatherService :: static void Refresh(ModuleConfig)
+WidgetStyle (class)
+WidgetStyle :: bool ShowBorder { get; set; }
+WidgetStyle :: bool ShowShadow { get; set; }
+WidgetStyle :: double BorderThickness { get; set; }
+WidgetStyle :: double CornerRadius { get; set; }
+WidgetStyle :: int BorderOpacity { get; set; }
+WidgetStyle :: int Padding { get; set; }
+WidgetStyle :: int Spacing { get; set; }
+WidgetStyle :: new()
+WidgetStyle :: string Blur { get; set; }
+WidgetStyle :: string BorderColor { get; set; }
+WidgetStyle :: string GlassEdge { get; set; }
+WidgetStyle :: string Name { get; set; }
+WidgetWindow :: static void StyleScrollbars(FrameworkElement)
+WidgetWindow :: void BeginTyping(ITypingModule)
+WidgetWindow :: void EndTyping(ITypingModule)

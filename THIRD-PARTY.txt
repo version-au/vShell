@@ -1,0 +1,11 @@
+vShell uses these, with thanks:
+
+vSuite.Core - the suite's shared library (theme, windows, updates)
+  (c) 2026 Steven (version-au) - https://github.com/version-au/vSuite.Core
+  Licence: MIT.
+
+.NET - the runtime built into the app
+  (c) .NET Foundation and Contributors - https://dotnet.microsoft.com
+  Licence: MIT.
+
+Weather comes from Open-Meteo (https://open-meteo.com, CC BY 4.0) when the Weather module is used - nothing of it is built in.

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The Seerr integration as a vShell plugin: vShell.Seerr.dll, built for exactly the vShell version in ..\..\vShell.csproj
+       (read from there, so there's only one version number to bump). build.cmd puts it in dist\ with its .sha256. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>vShell.Seerr</AssemblyName>
+    <RootNamespace>vShell</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <VShellProject>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\vShell.csproj'))</VShellProject>
+    <Version>$([System.Text.RegularExpressions.Regex]::Match($(VShellProject), '&lt;Version&gt;([^&lt;]+)&lt;/Version&gt;').Groups[1].Value)</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>

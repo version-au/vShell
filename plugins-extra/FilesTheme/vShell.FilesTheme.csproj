@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Files theme: a plugin you add yourself (Settings > Plugins > Add from a file), not part of vShell's release - build.cmd doesn't
+       build plugins-extra\. Build it with: dotnet build plugins-extra\FilesTheme\vShell.FilesTheme.csproj -c Release
+       Uses only the plugin API, so it loads in any vShell with the same plugin API as the one it was built against. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>vShell.FilesTheme</AssemblyName>
+    <RootNamespace>vShell</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Version>2.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>
