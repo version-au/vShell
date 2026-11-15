@@ -172,19 +172,12 @@ namespace vShell.Ui
             p.Check("Accept the console's self-signed HTTPS certificate", delegate { return u.IgnoreCert; }, delegate (bool v) { u.IgnoreCert = v; });
             p.Text("Network site (empty = the first one)", delegate { return u.Site; }, delegate (string v) { u.Site = v; });
             p.Slider("Check Network every (seconds)", 5, 120, delegate { return u.PollSeconds; }, delegate (double v) { u.PollSeconds = (int)v; });
-            p.Header("Account for vTrace's history (optional)");
-            p.Text("Username of a local View Only account", delegate { return u.HistUser; }, delegate (string v) { u.HistUser = v; });
-            PasswordBox hpw = p.Secret("Its password", "password", delegate { return u.HistPassword; }, delegate (string v) { u.HistPassword = v; },
-                "vShell doesn't use this - the vTrace app does: UniFi only gives its history (System Log: admin changes, firmware updates, devices dropping off, " +
-                "internet drops) to a signed-in user, not to an API key. Make a local account just for it: UniFi OS > Admins & Users > add an admin, " +
-                "\"Restrict to local access only\", role View Only - it can't change anything. Stored encrypted for your Windows account.");
-            p.Note("Leave these empty if you don't use vTrace - vTrace then notices device changes itself while it runs.");            p.Text("Run box keyword (without the !)", delegate { return u.Bang; }, delegate (string v) { u.Bang = v; },
+            p.Text("Run box keyword (without the !)", delegate { return u.Bang; }, delegate (string v) { u.Bang = v; },
                    "!" + u.Bang + " phone - UniFi clients and devices whose name, IP or MAC contains \"phone\": where they're connected, their IP. Enter copies the IP.");
             p.Test(delegate
             {
                 if (npw.Password.Trim().Length > 0) { u.NetKey = Secret.Protect(npw.Password.Trim()); npw.Password = ""; }
                 if (ppw.Password.Trim().Length > 0) { u.ProtectKey = Secret.Protect(ppw.Password.Trim()); ppw.Password = ""; }
-                if (hpw.Password.Trim().Length > 0) { u.HistPassword = hpw.Password.Trim(); hpw.Password = ""; }
                 p.Changed();
             }, delegate { return Unifi.TestAsync(S); });
         }

@@ -28,10 +28,6 @@ namespace vShell.Core
         public string ProtectKeyPlain { get { return _b.GetSecret("ProtectKey"); } }
         /// <summary>Consoles use a self-signed certificate.</summary>
         public bool IgnoreCert { get { return _b.Get("IgnoreCert", true); } set { _b.Set("IgnoreCert", value); } }
-        /// <summary>An optional local View Only account - not used by vShell; the vTrace app reads it (with the address) for UniFi's history:
-        /// System Log / events, which UniFi only gives a signed-in user, not an API key.</summary>
-        public string HistUser { get { return _b.Get("HistUser", ""); } set { _b.Set("HistUser", (value ?? "").Trim()); } }
-        public string HistPassword { get { return _b.Get("HistPassword", ""); } set { _b.Set("HistPassword", Secret.Protect(value ?? "")); } }
         /// <summary>The Network site (name); empty = the first one ("Default").</summary>
         public string Site { get { return _b.Get("Site", ""); } set { _b.Set("Site", (value ?? "").Trim()); } }
         /// <summary>How often the Network data is read while a module shows it.</summary>

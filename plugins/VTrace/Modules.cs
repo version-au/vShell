@@ -122,7 +122,7 @@ namespace VShellVTrace
         static string Clock(DateTime d) { return TimeText.Clock(d); }
 
         /// <summary>
-        /// The refresh button (only while vTrace isn't open): vTrace looks at every source once with no window, then closes. Dimmed while
+        /// The refresh button: the vTrace server looks at every source now. Dimmed while
         /// it's looking. after = redraw now.
         /// </summary>
         public static TextBlock RefreshGlyph(Theme t, double size, Action after)
@@ -132,7 +132,7 @@ namespace VShellVTrace
             {
                 Text = "", FontFamily = IconUtil.GlyphFont, FontSize = size, Foreground = t.MainAccent, VerticalAlignment = VerticalAlignment.Center,
                 Cursor = busy ? Cursors.Arrow : Cursors.Hand, Opacity = busy ? 0.4 : 0.9, Background = Brushes.Transparent, Padding = new Thickness(4, 2, 2, 2),
-                ToolTip = busy ? "Checking for changes…" : TraceServer.On ? "Look for changes now (the vTrace server looks at every source)" : "Check for changes now (vTrace looks once in the background, then closes)"
+                ToolTip = busy ? "Checking for changes…" : "Look for changes now (the vTrace server looks at every source)"
             };
             g.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
             g.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e)
@@ -177,7 +177,7 @@ namespace VShellVTrace
         }
 
         /// <summary>
-        /// A heading ("Changes · 12 today" with the All / Issues switch, and while vTrace isn't open: the refresh button and "Checked 2:14
+        /// A heading ("Changes · 12 today" with the All / Issues switch, the refresh button and "Checked 2:14
         /// PM · 3 h ago"), outages still going, today's chart, then the latest changes (or only the issues). Click = open vTrace.
         /// switched = the All / Issues switch was clicked (save, redraw).
         /// </summary>
@@ -243,7 +243,7 @@ namespace VShellVTrace
                 }
             }
             if (v.Chart) st.Children.Add(Chart(t, today, fs));
-            if (all.Count == 0) st.Children.Add(Txt(t, TraceServer.On ? (TraceServer.Latest.Checked ? "Nothing in the last week yet - set up its sources in vTrace's Options." : "Asking vTrace…") : closed ? "Nothing yet - refresh to check now, or open vTrace." : "Nothing yet - vTrace looks every few minutes while it runs.", t.FgDim, fs - 1));
+            if (all.Count == 0) st.Children.Add(Txt(t, !TraceServer.On ? "Set up your vTrace server in Settings > Plugins > vTrace." : TraceServer.Latest.Checked ? "Nothing in the last week yet - set up its sources in vTrace's Options." : "Asking vTrace…", t.FgDim, fs - 1));
             else if (listed.Count == 0) st.Children.Add(Txt(t, "No issues - nothing went down or failed.", t.FgDim, fs - 1));
             // the same change again and again (a file copied 4 times in a minute) is one row, "×4"
             var rows = new List<Tuple<Change, int>>();
@@ -403,7 +403,7 @@ namespace VShellVTrace
                 tip = "vTrace: " + today.Count + " change" + (today.Count == 1 ? "" : "s") + " today" + (today.Count > 0 ? "\nLatest: " + today[0].Title + " (" + TimeText.Clock(today[0].When) + ")" : "") + "\nClick for the latest";
             }
             bool closed = !TraceData.AppOpen, busy = TraceData.Refreshing;
-            if (closed && TraceData.Error == null) tip += "\n" + TraceData.CheckedText() + (TraceServer.On ? " (the refresh button asks the server to look now)" : " (vTrace isn't open - the refresh button checks now)");
+            if (closed && TraceData.Error == null) tip += "\n" + TraceData.CheckedText() + " (the refresh button asks the server to look now)";
             bool hide = _cfg.HideIfNone && TraceData.Error == null && down.Count == 0 && today.Count == 0;
             string sig = text + "|" + hide + "|" + tip + "|" + closed + "|" + busy;
             if (_popup != null && _popup.IsOpen)
@@ -417,7 +417,7 @@ namespace VShellVTrace
             _text.Foreground = fg;
             _glyph.Foreground = down.Count > 0 ? fg : _t.MainAccent;
             ToolTip = tip;
-            // the refresh button, only while vTrace isn't open (it looks by itself when it is)
+            // the refresh button (the server looks now)
             if (_refresh != null) { _sp.Children.Remove(_refresh); _refresh = null; }
             if (closed)
             {

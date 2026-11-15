@@ -2,12 +2,11 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Threading;
 using vShell.Core;
 using vShell.Ui;
 
 [assembly: VShellPlugin("vtrace", "vTrace",
-    Description = "vTrace's changes and outages: a bar module (an outage, or how many changes today) and a widget with the latest changes - from your vTrace server (this PC's own changes go to it too), or the vTrace app on this PC.",
+    Description = "vTrace's changes and outages: a bar module (an outage, or how many changes today) and a widget with the latest changes - from your vTrace server, and this PC's own changes sent to it.",
     Glyph = "", Group = "Servers & network", Author = "version", Adds = "notifications", Types = "VTraceBar,VTraceList")]
 
 namespace VShellVTrace
@@ -15,14 +14,13 @@ namespace VShellVTrace
     /// <summary>
     /// The vTrace plugin - made only with vShell's plugin API. With a vTrace server set up (Settings > Plugins > vTrace: its address and
     /// an app key) it shows what the server found, its notifications, sends your colours, and sends this PC's own changes (Windows' logs)
-    /// to it; clicks open the change in your browser. Without one it reads the Windows vTrace app's changes.json, as before (until that
-    /// app retires).
+    /// to it; clicks open the change in your browser. (The Windows vTrace app retired on 2026-11-15 - 2.1.0 dropped reading it.)
     /// </summary>
     public sealed class Plugin : IPlugin
     {
         static string Needs(BarSettings s)
         {
-            return VtSettings.Of(s).Configured || TraceData.There ? null : "Set up your vTrace server in Settings > Plugins > vTrace (or run the vTrace app once)";
+            return VtSettings.Of(s).Configured ? null : "Set up your vTrace server in Settings > Plugins > vTrace";
         }
 
         public void Load(PluginHost host)
@@ -45,36 +43,15 @@ namespace VShellVTrace
             host.SetUpWhen(delegate (BarSettings s) { return VtSettings.Of(s).Configured; });
             host.AddNotifications(BuildNotifications);
             TraceServer.Start(host);
-            host.OnSettings(delegate (BarSettings s) { TraceData.AutoMinutes = AutoOf(s); TraceServer.OnSettings(s); });
-            TraceData.AutoMinutes = AutoOf(host.Manager.Settings);
+            host.OnSettings(delegate (BarSettings s) { TraceServer.OnSettings(s); });
             TraceServer.OnSettings(host.Manager.Settings);
-            // the Windows app's auto check: once a minute, is a check due? (no server set up, vTrace not open, the last look older than the setting)
-            _auto = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMinutes(1) };
-            _auto.Tick += delegate { TraceData.AutoCheck(); };
-            _auto.Start();
         }
 
-        DispatcherTimer _auto;
-
-        public void Unload()
-        {
-            if (_auto != null) { _auto.Stop(); _auto = null; }
-            TraceServer.Stop();
-        }
+        public void Unload() { TraceServer.Stop(); }
 
         // =================================================================
         // Settings > Plugins > vTrace
         // =================================================================
-        static readonly int[] AutoChoices = { 0, 5, 10, 30, 60 };
-
-        static string AutoText(int m) { return m <= 0 ? "Off" : "Every " + m + " minutes"; }
-
-        static int AutoOf(BarSettings s)
-        {
-            int m = s.Integration("vtrace").Get("AutoMinutes", 0);
-            return Array.IndexOf(AutoChoices, m) >= 0 ? m : 0;
-        }
-
         static void SettingsSection(SettingsWindow.SettingsPage p)
         {
             VtSettings c = VtSettings.Of(p.Settings);
@@ -87,16 +64,7 @@ namespace VShellVTrace
             p.Note("Windows updates, programs installed or removed, drivers, starts and shut-downs - read from this PC's Windows logs every 15 minutes (the first time, the last 30 days), so they're in vTrace's timeline with everything else. Nothing else leaves this PC." + (TraceServer.PcStatus.Length > 0 ? "\n" + TraceServer.PcStatus : ""));
             p.Check("Send vShell's colours to vTrace", delegate { return c.SendColours; }, delegate (bool v) { c.SendColours = v; if (v) TraceServer.ThemeChanged(); });
             p.Test(delegate { }, TraceServer.TestAsync);
-
-            p.Header("The vTrace app on this PC (no server)");
-            string[] items = Array.ConvertAll(AutoChoices, AutoText);
-            p.Combo("Check for changes", items, delegate { return AutoText(AutoOf(p.Settings)); }, delegate (string v)
-            {
-                int i = Array.IndexOf(items, v);
-                p.Settings.Integration("vtrace").Set("AutoMinutes", i < 0 ? 0 : AutoChoices[i]);
-                p.Changed();
-            });
-            p.Note("Only without a vTrace server: the Windows app runs in the background with no window, checks every source once and closes - the same as the refresh button on the vTrace widget and bar module. While the app is open it checks by itself, so this waits.");
+            p.Note("No vTrace server yet? Install it in a Proxmox node's shell: bash -c \"$(curl -fsSL https://vsuite.vrsion.com/vtrace/lxc.sh)\"");
         }
 
         static void BuildNotifications(SettingsWindow.SettingsPage p)
@@ -117,7 +85,7 @@ namespace VShellVTrace
             p.Header("In its popup");
             p.Number("Changes to show", delegate { return v.Rows; }, delegate (double d) { v.Rows = (int)Math.Round(d); p.Changed(); });
             p.Check("Only issues (outages and changes that failed)", delegate { return v.IssuesOnly; }, delegate (bool b) { v.IssuesOnly = b; p.Changed(); });
-            p.Note("Click it for the latest changes (All / Issues at the top switches too); Open vTrace there shows them all - your vTrace server in the browser, or the vTrace app. An outage still going shows in red on the bar. The refresh button has vTrace look now.");
+            p.Note("Click it for the latest changes (All / Issues at the top switches too); Open vTrace there shows them all in your browser. An outage still going shows in red on the bar. The refresh button has vTrace look now.");
         }
 
         static void ListRows(SettingsWindow.SettingsPage p, ModuleConfig cfg)
@@ -126,7 +94,7 @@ namespace VShellVTrace
             p.Number("Changes to show", delegate { return v.Rows; }, delegate (double d) { v.Rows = (int)Math.Round(d); p.Changed(); });
             p.Check("Today's changes by the hour (a small chart)", delegate { return v.Chart; }, delegate (bool b) { v.Chart = b; p.Changed(); });
             p.Check("Only issues (outages and changes that failed)", delegate { return v.IssuesOnly; }, delegate (bool b) { v.IssuesOnly = b; p.Changed(); });
-            p.Note("What vTrace has found - from your vTrace server, or the vTrace app's changes file. All / Issues at its top switches between every change and only the issues; the refresh button has vTrace look now, and the widget says when it last looked. Click a change to open it in vTrace.");
+            p.Note("What your vTrace server has found. All / Issues at its top switches between every change and only the issues; the refresh button has vTrace look now, and the widget says when it last looked. Click a change to open it in vTrace.");
         }
 
         static FrameworkElement BarPic(Theme t)

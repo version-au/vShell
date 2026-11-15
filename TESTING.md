@@ -3363,3 +3363,11 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
    failed change / a source that can't be read as important, back up as normal (Settings > Notifications > vTrace sets the looks);
    older events aren't replayed when vShell starts. Show vTrace's notifications off: none.
 6. No server set up: everything as before with the vTrace app (its file, the refresh that runs vTrace.exe --refresh, Check for changes).
+## 0.38.220 - the Windows vTrace retired
+1. Settings > Plugins > vTrace: only the vTrace server (address, key, this PC's changes, colours, Test) and a line with the install command -
+   no "The vTrace app on this PC" / Check for changes.
+2. No server set up: the vTrace modules in the gallery say "Set up your vTrace server in Settings > Plugins > vTrace"; a widget already
+   placed says the same.
+3. With a server: as 0.38.219 (changes, outages, refresh = the server looks, clicks open the browser, notifications, this PC's changes).
+4. Settings > Updates > vSuite apps: vXplorer, vView, vTerm, vPad - no vTrace.
+5. Settings > Plugins > UniFi: no "Account for vTrace's history" block; the rest as before.

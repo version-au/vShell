@@ -3,6 +3,12 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.220
+
+- vTrace plugin 2.1.0: only the vTrace server - the Windows vTrace app is retired.
+- Settings > Updates > vSuite apps no longer lists vTrace (it's a server app now).
+- UniFi plugin: the account for the Windows vTrace's history is gone.
+
 ## 0.38.219 · release
 
 - vTrace plugin 2.0.0: shows your vTrace server (its address and an app key in Settings > Plugins > vTrace) - its changes, outages and notifications, the refresh button asks it to look, a click opens the change in your browser - and sends this PC's own changes to it. Without a server it reads the vTrace app as before.

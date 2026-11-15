@@ -11,7 +11,7 @@ using vShell.Core;
 namespace vShell.Ui
 {
     /// <summary>
-    /// Settings > Updates > vSuite apps: vXplorer, vView, vTerm, vPad and vTrace - whether they're installed, which version, whether a newer one is out - with
+    /// Settings > Updates > vSuite apps: vXplorer, vView, vTerm and vPad (the Windows vTrace retired 2026-11-15 - vTrace is a server now) - whether they're installed, which version, whether a newer one is out - with
     /// Open, Update (starts the app with --update: it updates itself with its own notice and roll-back) and Install (its newest installer). The update site is asked once per Settings window, when the Updates page shows.
     /// </summary>
     public partial class SettingsWindow
@@ -43,7 +43,6 @@ namespace vShell.Ui
                 new SuiteApp { Name = "vView", Glyph = "", Blurb = "Pictures, videos and sounds in your vShell theme", InnoId = "{4E8B2D6A-7C31-4F9A-9E52-B1D3A6C8F072}" },
                 new SuiteApp { Name = VTerm.Name, Glyph = "", Blurb = "The terminal - the Terminal module's drop-down, and windows of its own", InnoId = VTerm.InnoId },
                 new SuiteApp { Name = "vPad", Glyph = "\uE70B", Blurb = "A text editor - tabs, syntax colours, Markdown, and files on your servers", InnoId = "{03F65620-3C49-4AC0-A0CF-4B60DF14E4F0}" },
-                new SuiteApp { Name = "vTrace", Glyph = "\uE9D9", Blurb = "What changed, and when - your PC, servers, Komodo and Proxmox on one timeline", InnoId = "{36C71FB6-22DE-485C-B2D6-708884B3D771}" },
             };
         }
 
