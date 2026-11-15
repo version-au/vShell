@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.218
+## 0.38.218 · release
 
 - vTrace plugin 1.5.0: the widget and popup can show only issues (outages and failed changes) - All / Issues at the top, or a setting.
 - vTrace plugin 1.5.1: on All, outages still going are red rows in the list; their causes and the AI's notes show on Issues.
