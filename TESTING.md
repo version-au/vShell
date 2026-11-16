@@ -3394,3 +3394,9 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 8. Palette: "Update Vaultwarden to 1.35.0", "Reboot pihole", "Shut down …", "Console in …", "Open in vDeploy" per LXC / VM.
 9. Notifications: vDeploy's "Vaultwarden 1.35.0 is out" (app-update) shows as the "Newer images" kind.
 10. An older vDeploy (no nodes in /overview): everything as 1.3.0.
+## 0.38.223 - vTrace plugin 2.1.2: no skipped notifications
+1. With notifications on, stop vShell reaching the vTrace server (sleep the PC, or block it) while the server writes more than 200
+   Activity events marked for vShell, then let it back: the notifications arrive over the next polls, 200 at a time, oldest first -
+   none are skipped (before, only the first 200 came and the rest were dropped). Starting vShell still replays nothing old.
+2. Empty the server's Activity (its numbers start again from 1) while vShell runs: new events show as notifications without
+   restarting vShell.

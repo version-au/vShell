@@ -384,14 +384,20 @@ namespace VShellVTrace
             Latest = snap;
             if (snap.Ok && events != null)
             {
-                long upTo = Math.Max(_seen ?? 0, VtClient.LastEvent);
+                // the first look starts from now (older events aren't replayed); after that only as far as the events that
+                // actually came - the server sends 200 at a time, and its "last" can be ahead of them
+                long upTo = _seen ?? VtClient.LastEvent;
                 if (_seen != null)
+                {
                     foreach (VtEvent e in events.OrderBy(x => x.Id))
                     {
+                        if (e.Id <= upTo) continue;
                         if (e.ToVShell) Tell(e);
-                        upTo = Math.Max(upTo, e.Id);
+                        upTo = e.Id;
                     }
-                _seen = upTo;    // the first look starts from now: older events aren't replayed
+                    if (VtClient.LastEvent < upTo) upTo = VtClient.LastEvent;    // the server's Activity was started again: follow its numbers
+                }
+                _seen = upTo;
             }
         }
 

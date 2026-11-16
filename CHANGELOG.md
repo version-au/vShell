@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.223
+
+- vTrace plugin 2.1.2: notifications aren't skipped when many pile up while the PC sleeps or the server can't be reached, and they carry on after the server's Activity starts again.
+
 ## 0.38.222 · pre-release
 
 - vDeploy plugin 2.0.0: vDeploy's Proxmox nodes and their helper-script LXCs / VMs in the popup and widget (a setting hides them), with app updates, start, shut down, reboot and a console in vTerm.
