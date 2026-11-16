@@ -145,17 +145,21 @@ namespace VDeploy
             Latest = snap;
             if (snap.Ok)
             {
-                bool first = _seen == null;
-                long upTo = Math.Max(_seen ?? 0, snap.LastEvent);
-                if (events != null)
+                // the first look starts from now (nothing old is replayed). After that only as far as the events that actually came:
+                // a request that failed, or an answer with part of a long backlog, leaves the rest to be asked for again
+                if (_seen == null || snap.LastEvent < _seen.Value) _seen = snap.LastEvent;     // (lower: the server's numbers started again)
+                else if (events != null)
                 {
+                    long upTo = _seen.Value;
                     foreach (VdEvent e in events.OrderBy(x => x.Id))
                     {
-                        if (!first && e.ToVShell) Tell(e);
-                        upTo = Math.Max(upTo, e.Id);
+                        if (e.Id <= upTo) continue;
+                        if (e.ToVShell) Tell(e);
+                        upTo = e.Id;
                     }
+                    if (events.Count == 0) upTo = Math.Max(upTo, snap.LastEvent);     // nothing after it: up to date
+                    _seen = upTo;
                 }
-                _seen = upTo;
             }
             Action a = Changed;
             if (a != null) a();

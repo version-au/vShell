@@ -51,6 +51,9 @@ namespace vShell.Core
         public static string BrokenCopy;
         /// <summary>A restore or import is waiting for the restart: the running vShell must not write its settings over it.</summary>
         public static bool SaveBlocked;
+        /// <summary>Set at start when settings.json couldn't be read and couldn't be copied aside either: it's left as it is, and this
+        /// run saves nothing (SaveBlocked) - new settings would have gone over the real ones.</summary>
+        public static bool Unreadable;
 
         /// <summary>The backups, newest first.</summary>
         public static List<BackupInfo> List()

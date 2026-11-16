@@ -68,6 +68,10 @@ namespace vShell
                     Notify.Post("vShell", "Your settings couldn't be read - vShell used a backup",
                                 "The backup from " + TimeText.Stamp(SettingsBackup.RestoredFrom.When) + ". The file that couldn't be read is kept in the backups folder " +
                                 "(Settings > System > Backups).", "", NotifyLevel.Alert);
+                else if (SettingsBackup.Unreadable)
+                    Notify.Post("vShell", "Your settings couldn't be read - nothing is being saved",
+                                "settings.json couldn't be opened or copied (another program may have it open, or the folder can't be written to), so vShell is " +
+                                "showing new settings and won't save any change over yours. Close vShell, check %APPDATA%\\vShell, and start it again.", "", NotifyLevel.Alert);
                 else if (SettingsBackup.BrokenCopy != null)
                     Notify.Post("vShell", "Your settings couldn't be read - vShell started fresh",
                                 "There was no backup to use. The file that couldn't be read is kept in the backups folder (Settings > System > Backups).", "", NotifyLevel.Alert);

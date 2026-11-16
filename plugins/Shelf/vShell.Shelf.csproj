@@ -6,7 +6,7 @@
     <AssemblyName>vShell.Shelf</AssemblyName>
     <RootNamespace>VShellShelf</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Version>1.1.3</Version>
+    <Version>1.1.4</Version>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <DebugType>none</DebugType>

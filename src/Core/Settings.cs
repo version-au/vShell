@@ -352,15 +352,31 @@ namespace vShell.Core
             }
             catch (Exception ex) { Log.Write("Settings migrate failed: " + ex.Message); }
             bool there = false;
-            try
+            // a file another program has open for a moment (a sync or backup tool, a virus scanner) isn't a broken one: try again
+            for (int tries = 0; tries < 6 && s == null; tries++)
             {
-                there = File.Exists(ConfigPath);
-                if (there)
-                    s = JsonSerializer.Deserialize<BarSettings>(File.ReadAllText(ConfigPath), JsonOpts);
+                try
+                {
+                    there = File.Exists(ConfigPath);
+                    if (there)
+                        s = JsonSerializer.Deserialize<BarSettings>(File.ReadAllText(ConfigPath), JsonOpts);
+                    break;
+                }
+                catch (IOException ex) when (tries < 5) { Log.Write("Settings load: " + ex.Message + " - trying again"); System.Threading.Thread.Sleep(250); }
+                catch (Exception ex) { Log.Write("Settings load failed: " + ex.Message); break; }
             }
-            catch (Exception ex) { Log.Write("Settings load failed: " + ex.Message); }
             // there but unreadable: never start from defaults over it - keep it aside and use the newest good backup
-            if (s == null && there) s = SettingsBackup.Recover();
+            if (s == null && there)
+            {
+                s = SettingsBackup.Recover();
+                // not even a copy could be kept: settings.json is left alone, and nothing may be saved over it this run
+                if (s == null && SettingsBackup.BrokenCopy == null)
+                {
+                    SettingsBackup.Unreadable = true;
+                    SettingsBackup.SaveBlocked = true;
+                    Log.Write("Settings: settings.json can't be read and couldn't be copied aside - running on new settings, saving nothing over it");
+                }
+            }
             if (s == null) s = new BarSettings { WidgetBoxVersion = 2 };      // first start: nothing to convert
             if (s.WidgetBoxVersion < 1) s.MigrateWidgetBoxes();
             s.Normalize();

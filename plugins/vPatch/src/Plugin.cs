@@ -131,14 +131,21 @@ namespace VPatch
             Latest = snap;
             if (snap.Ok)
             {
-                long upTo = Math.Max(_seen ?? 0, snap.LastEvent);
-                if (_seen != null && events != null)
+                // the first look starts from now (older events aren't replayed). After that only as far as the events that actually
+                // came: a request that failed, or an answer with part of a long backlog, leaves the rest to be asked for again
+                if (_seen == null || snap.LastEvent < _seen.Value) _seen = snap.LastEvent;     // (lower: the server's numbers started again)
+                else if (events != null)
+                {
+                    long upTo = _seen.Value;
                     foreach (VpEvent e in events.OrderBy(x => x.Id))
                     {
+                        if (e.Id <= upTo) continue;
                         if (e.ToVShell) Tell(e);
-                        upTo = Math.Max(upTo, e.Id);
+                        upTo = e.Id;
                     }
-                _seen = upTo;    // the first look starts from now: older events aren't replayed
+                    if (events.Count == 0) upTo = Math.Max(upTo, snap.LastEvent);     // nothing after it: up to date
+                    _seen = upTo;
+                }
             }
             Action a = Changed;
             if (a != null) a();

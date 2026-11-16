@@ -6,6 +6,9 @@ Newest first. The heading must start with `## ` and the version number exactly a
 ## 0.38.223
 
 - vTrace plugin 2.1.2: notifications aren't skipped when many pile up while the PC sleeps or the server can't be reached, and they carry on after the server's Activity starts again.
+- vDeploy plugin 2.0.1 and vPatch plugin 1.0.1: the same - no notification is skipped when many are waiting or a request fails.
+- A settings.json that can't be opened for a moment is tried again; one that can't be read or copied aside is never saved over (vShell says so and saves nothing until it starts again).
+- Shelf plugin 1.1.4: a shelves.json that can't be read is kept (shelves.broken-<time>.json) and never saved over with empty shelves.
 
 ## 0.38.222 · pre-release
 

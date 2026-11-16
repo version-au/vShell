@@ -74,6 +74,7 @@ namespace VShellShelf
 
         static ShelfData _data;
         static DispatcherTimer _save;
+        static bool _noSave;
 
         /// <summary>Something on a shelf changed (on the UI thread).</summary>
         public static event Action Changed;
@@ -83,11 +84,33 @@ namespace VShellShelf
         static void Load()
         {
             if (_data != null) return;
-            try
+            bool there = false;
+            for (int tries = 0; tries < 4 && _data == null; tries++)
             {
-                if (File.Exists(FileName)) _data = JsonSerializer.Deserialize<ShelfData>(File.ReadAllText(FileName));
+                try
+                {
+                    there = File.Exists(FileName);
+                    if (there) _data = JsonSerializer.Deserialize<ShelfData>(File.ReadAllText(FileName));
+                    break;
+                }
+                catch (IOException ex) when (tries < 3) { Log.Write("Shelf: shelves.json - " + ex.Message + " - trying again"); System.Threading.Thread.Sleep(150); }
+                catch (Exception ex) { Log.Write("Shelf: couldn't read shelves.json - " + ex.Message); break; }
             }
-            catch (Exception ex) { Log.Write("Shelf: couldn't read shelves.json - " + ex.Message); }
+            if (_data == null && there)
+            {
+                // there but unreadable: the new, empty shelves must never be saved over it - keep it aside, or save nothing this run
+                try
+                {
+                    string kept = System.IO.Path.Combine(Folder, "shelves.broken-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".json");
+                    File.Copy(FileName, kept, true);
+                    Log.Write("Shelf: the shelves.json that couldn't be read is kept as " + kept);
+                }
+                catch (Exception ex)
+                {
+                    _noSave = true;
+                    Log.Write("Shelf: couldn't keep a copy of shelves.json (" + ex.Message + ") - nothing is saved over it until vShell starts again");
+                }
+            }
             if (_data == null) _data = new ShelfData();
             if (_data.Shelves == null) _data.Shelves = new List<Shelf>();
             _data.Shelves.RemoveAll(delegate (Shelf s) { return s == null; });
@@ -124,7 +147,7 @@ namespace VShellShelf
 
         public static void SaveNow()
         {
-            if (_data == null) return;
+            if (_data == null || _noSave) return;
             try
             {
                 Directory.CreateDirectory(Folder);

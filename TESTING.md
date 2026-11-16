@@ -3400,3 +3400,9 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
    none are skipped (before, only the first 200 came and the rest were dropped). Starting vShell still replays nothing old.
 2. Empty the server's Activity (its numbers start again from 1) while vShell runs: new events show as notifications without
    restarting vShell.
+
+## 0.38.223 - settings that can't be read; vDeploy 2.0.1 / vPatch 1.0.1 / Shelf 1.1.4
+1. vDeploy and vPatch plugins: as the vTrace plugin above - block the server's /api/v1/events for a poll (or let more events queue than one answer holds) and the notifications still all arrive on later polls; restart the server with an emptied Activity and new events still show.
+2. Start vShell while another program holds settings.json open without sharing (PowerShell: `$f = [IO.File]::Open("$env:APPDATA\vShell\settings.json", "Open", "Read", "None")`, close it within a second with `$f.Close()`): the log says "trying again" and vShell starts with your settings.
+3. The same but keep it open, and make the backups folder read-only (so no copy can be kept): vShell starts with new settings, an alert "Your settings couldn't be read - nothing is being saved", and after closing it settings.json is byte-for-byte what it was. Normal case (a broken settings.json, backups writable): unchanged - the newest backup is used and the broken file kept.
+4. Shelf: break %APPDATA%\vShell\shelf\shelves.json (delete its last brace) and start vShell: the two default shelves show, shelves.broken-<time>.json beside it holds the broken file. With that folder read-only for copies: nothing is saved over shelves.json this run (the log says so).
