@@ -140,6 +140,15 @@ namespace VShellVTrace
             using (JsonDocument d = JsonDocument.Parse(await Send(Req(HttpMethod.Get, c, path), ct).ConfigureAwait(false)))
             {
                 if (d.RootElement.TryGetProperty("last", out JsonElement last) && last.ValueKind == JsonValueKind.Number) LastEvent = last.GetInt64();
+                // vTrace 0.1.8+: has anything in /changes changed since the last look at it? (null: an older server - always read)
+                if (d.RootElement.TryGetProperty("rev", out JsonElement rev) && rev.ValueKind == JsonValueKind.Number)
+                {
+                    LastProblems = (int)JsonValue.Num(d.RootElement, "problems");
+                    LastLooking = JsonValue.Bool(d.RootElement, "looking", false);
+                    LastLooked = Date(JsonValue.Str(d.RootElement, "looked"));
+                    ChangesKey = rev.GetInt64().ToString(CultureInfo.InvariantCulture) + "|" + LastProblems.ToString(CultureInfo.InvariantCulture);
+                }
+                else ChangesKey = null;
                 if (d.RootElement.TryGetProperty("events", out JsonElement ev) && ev.ValueKind == JsonValueKind.Array)
                     foreach (JsonElement e in ev.EnumerateArray())
                         list.Add(new VtEvent
@@ -153,6 +162,11 @@ namespace VShellVTrace
 
         /// <summary>The server's newest event id, from the last /events answer.</summary>
         public static long LastEvent;
+        /// <summary>From the last /events answer: what /changes would say now ("revision|sources with a problem"; null = the server doesn't tell).</summary>
+        public static string ChangesKey;
+        public static bool LastLooking;
+        public static DateTime LastLooked = DateTime.MinValue;
+        public static int LastProblems;
 
         /// <summary>Ask vTrace to look at every source now. null = it's on it, else why not.</summary>
         public static async Task<string> LookAsync(VtSettings c)
@@ -347,11 +361,15 @@ namespace VShellVTrace
         public static void OnSettings(BarSettings s)
         {
             _settings = s;
+            _changesKey = null;      // it may be another server now: read its changes afresh
             if (Poll == null) return;
             if (!VtSettings.Of(s).Configured) { if (Poll.Running) Poll.Stop(); Latest = new VtSnapshot(); _seen = null; return; }
             if (!Poll.Running) Poll.Start(); else Poll.PollNow();
             SendTheme(false);
         }
+
+        static string _changesKey;
+        static DateTime _changesAt = DateTime.MinValue;
 
         static async Task PollOnce()
         {
@@ -359,15 +377,33 @@ namespace VShellVTrace
             if (s == null) return;
             VtSettings c = VtSettings.Of(s);
             if (!c.Configured) return;
-            VtSnapshot snap;
-            try { snap = await VtClient.ChangesAsync(c, CancellationToken.None).ConfigureAwait(false); }
-            catch (Exception ex) { snap = new VtSnapshot { Ok = false, Checked = true, Error = VtClient.Plain(ex), Changes = Latest.Changes }; }
+            // the events first (a small answer): with them the server says whether its changes are still what we have
             List<VtEvent> events = null;
-            if (snap.Ok)
+            string key = null;
+            try
             {
-                try { events = await VtClient.EventsAsync(c, _seen, CancellationToken.None).ConfigureAwait(false); }
-                catch (Exception ex) { Log.Write("vTrace plugin: events: " + VtClient.Plain(ex)); }
+                events = await VtClient.EventsAsync(c, _seen, CancellationToken.None).ConfigureAwait(false);
+                key = VtClient.ChangesKey;
             }
+            catch (Exception ex) { Log.Write("vTrace plugin: events: " + VtClient.Plain(ex)); }
+            VtSnapshot snap, had = Latest;
+            if (key != null && key == _changesKey && had.Ok && DateTime.UtcNow - _changesAt < TimeSpan.FromMinutes(10))
+            {
+                // nothing changed there: the week of changes isn't downloaded and read again (every 10 minutes it is anyway -
+                // the week moves on)
+                snap = new VtSnapshot { Ok = true, Checked = true, Version = had.Version, Changes = had.Changes, Problems = VtClient.LastProblems, Looked = VtClient.LastLooked, Looking = VtClient.LastLooking };
+            }
+            else
+            {
+                try
+                {
+                    snap = await VtClient.ChangesAsync(c, CancellationToken.None).ConfigureAwait(false);
+                    _changesKey = key;
+                    _changesAt = DateTime.UtcNow;
+                }
+                catch (Exception ex) { snap = new VtSnapshot { Ok = false, Checked = true, Error = VtClient.Plain(ex), Changes = Latest.Changes }; _changesKey = null; }
+            }
+            if (!snap.Ok) events = null;
             Publish(snap, events);
             if (snap.Ok && _themeSent == null) SendTheme(false);
             if (snap.Ok && c.SendPc && DateTime.UtcNow - _pcTried > TimeSpan.FromMinutes(15)) _ = SendPcAsync(false);

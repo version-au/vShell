@@ -34,6 +34,9 @@ namespace VShellFans
         /// <summary>0rpm mode ("stops on its own"), set by hand for a fan: "1" / "0"; missing = found by itself (a GPU fan, with SkipGpu on).</summary>
         public Dictionary<string, string> OwnStop { get { return Pairs("OwnStop"); } set { SetPairs("OwnStop", value); } }
 
+        /// <summary>A setting's text as it is saved (FanStore reads the fans once a second: it only reads the lists again when this changed).</summary>
+        public string Raw(string key) { return _b.Get(key, ""); }
+
         List<string> Lines(string key)
         {
             var l = new List<string>();
@@ -143,15 +146,43 @@ namespace VShellFans
 
         static bool IsRpm(HwReading r) { return string.Equals((r.Unit ?? "").Trim(), "RPM", StringComparison.OrdinalIgnoreCase); }
 
+        /// <summary>The fans' lists from the settings, read out of their saved text - kept until that text changes (not every second).</summary>
+        sealed class Lists
+        {
+            public string Key;
+            public Dictionary<string, string> Names, Own, Maxes, Mins;
+            public Dictionary<string, int> Order;
+            public HashSet<string> Hidden;
+        }
+        static Lists _lists;
+
+        static Lists ListsOf(FanSettings s)
+        {
+            string key = s == null ? "" : s.Raw("Names") + "\u0001" + s.Raw("Order") + "\u0001" + s.Raw("Hidden") + "\u0001" + s.Raw("OwnStop") + "\u0001" + s.Raw("Maxes") + "\u0001" + s.Raw("Mins");
+            Lists l = _lists;
+            if (l != null && l.Key == key) return l;
+            l = new Lists { Key = key };
+            l.Names = s != null ? s.Names : new Dictionary<string, string>();
+            l.Own = s != null ? s.OwnStop : new Dictionary<string, string>();
+            l.Maxes = s != null ? s.Maxes : new Dictionary<string, string>();
+            l.Mins = s != null ? s.Mins : new Dictionary<string, string>();
+            l.Hidden = new HashSet<string>(s != null ? s.Hidden : new List<string>(), StringComparer.OrdinalIgnoreCase);
+            l.Order = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            List<string> order = s != null ? s.Order : new List<string>();
+            for (int i = 0; i < order.Count; i++) if (!l.Order.ContainsKey(order[i])) l.Order[order[i]] = i;
+            _lists = l;
+            return l;
+        }
+
         /// <summary>The fans as HWiNFO / LibreHardwareMonitor publish them now, named and ordered as set.</summary>
         static void Read()
         {
             FanSettings s = FanSettings.Current;
-            Dictionary<string, string> names = s != null ? s.Names : new Dictionary<string, string>();
-            List<string> order = s != null ? s.Order : new List<string>();
-            var hidden = new HashSet<string>(s != null ? s.Hidden : new List<string>(), StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, string> own = s != null ? s.OwnStop : new Dictionary<string, string>();
-            Dictionary<string, string> maxes = s != null ? s.Maxes : new Dictionary<string, string>();
+            Lists lists = ListsOf(s);
+            Dictionary<string, string> names = lists.Names;
+            HashSet<string> hidden = lists.Hidden;
+            Dictionary<string, string> own = lists.Own;
+            Dictionary<string, string> maxes = lists.Maxes;
             bool skipGpu = s == null || s.SkipGpu;
             var list = new List<Fan>();
             var labels = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -176,14 +207,13 @@ namespace VShellFans
                 });
             }
             // your order first, then any new fan where the sensors list it
-            list.Sort(delegate (Fan a, Fan b)
+            var rank = new Dictionary<Fan, int>();
+            for (int i = 0; i < list.Count; i++)
             {
-                int ia = order.FindIndex(delegate (string k) { return string.Equals(k, a.Key, StringComparison.OrdinalIgnoreCase); });
-                int ib = order.FindIndex(delegate (string k) { return string.Equals(k, b.Key, StringComparison.OrdinalIgnoreCase); });
-                if (ia < 0) ia = 10000 + list.IndexOf(a);
-                if (ib < 0) ib = 10000 + list.IndexOf(b);
-                return ia.CompareTo(ib);
-            });
+                int at;
+                rank[list[i]] = lists.Order.TryGetValue(list[i].Key, out at) ? at : 10000 + i;
+            }
+            list.Sort(delegate (Fan a, Fan b) { return rank[a].CompareTo(rank[b]); });
             foreach (Fan f in list)
             {
                 Fan was = _all.Find(delegate (Fan x) { return x.Key == f.Key; });
@@ -217,8 +247,11 @@ namespace VShellFans
         {
             Read();
             FanSettings s = FanSettings.Current;
-            Dictionary<string, string> mins = s != null ? s.Mins : new Dictionary<string, string>();
+            Dictionary<string, string> mins = ListsOf(s).Mins;
             DateTime now = DateTime.UtcNow;
+            int secs = s != null ? s.Seconds : 15;
+            bool notifySlow = s != null && s.NotifySlow;
+            int slowRpm = notifySlow ? s.SlowRpm : 0;
             foreach (Fan f in _all)
             {
                 if (f.Hist != null) f.Hist.Add(f.Rpm);
@@ -231,7 +264,7 @@ namespace VShellFans
                 int limit = -1;
                 if (mins.TryGetValue(f.Key, out own)) { int n; if (int.TryParse(own, out n)) limit = Math.Max(0, n); }
                 bool never = limit == 0;
-                if (limit < 0) limit = s != null && s.NotifySlow ? s.SlowRpm : 0;
+                if (limit < 0) limit = slowRpm;
 
                 // only a fan seen spinning can stop (a header with nothing on it reads 0 all the time)
                 bool stopped = !never && t.EverSpun && f.Rpm < 50 && !f.StopsAlone;
@@ -244,7 +277,6 @@ namespace VShellFans
                     continue;
                 }
                 if (t.BadSince == DateTime.MinValue) t.BadSince = now;
-                int secs = s != null ? s.Seconds : 15;
                 if ((now - t.BadSince).TotalSeconds < secs) continue;
                 f.Bad = true;
                 if (t.Posted || f.Hidden) continue;

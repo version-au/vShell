@@ -63,7 +63,8 @@ namespace vShell.Core
             bool needStore;
             lock (Gate)
             {
-                needStore = !_storeBusy && (DateTime.UtcNow - _storeAt).TotalMinutes > 10;
+                // asking Windows for the Store apps starts PowerShell (a second or more of CPU): every half hour is plenty
+                needStore = !_storeBusy && (DateTime.UtcNow - _storeAt).TotalMinutes > 30;
                 if (needStore) _storeBusy = true;
             }
             if (needStore) System.Threading.ThreadPool.QueueUserWorkItem(delegate { LoadStore(); });
@@ -251,7 +252,7 @@ namespace vShell.Core
             }
             catch (Exception ex) { Log.Write("Store apps: " + ex.Message); }
 
-            bool first;
+            bool changed = false;
             lock (Gate)
             {
                 // a failed read keeps the previous list
@@ -259,19 +260,21 @@ namespace vShell.Core
                 {
                     var old = new Dictionary<string, AppEntry>(StringComparer.OrdinalIgnoreCase);
                     foreach (var e in _store) old[e.Target] = e;
+                    // the same apps as last time (nearly every time): nobody is told, so no Start menu builds its list again
+                    changed = list.Count != _store.Count;
                     foreach (var e in list)
                     {
                         AppEntry prev;
-                        if (old.TryGetValue(e.Target, out prev)) { e.Icon = prev.Icon; e.IconTried = prev.IconTried; }
+                        if (old.TryGetValue(e.Target, out prev)) { e.Icon = prev.Icon; e.IconTried = prev.IconTried; if (prev.Name != e.Name) changed = true; }
+                        else changed = true;
                     }
                     _store = list;
+                    if (changed) Merge();
                 }
                 _storeAt = DateTime.UtcNow;
                 _storeBusy = false;
-                Merge();
-                first = true;
             }
-            if (first) RaiseChanged();
+            if (changed) RaiseChanged();
         }
 
         static void ParseStore(string json, List<AppEntry> list)

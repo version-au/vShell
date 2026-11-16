@@ -9,6 +9,10 @@ Newest first. The heading must start with `## ` and the version number exactly a
 - vDeploy plugin 2.0.1 and vPatch plugin 1.0.1: the same - no notification is skipped when many are waiting or a request fails.
 - A settings.json that can't be opened for a moment is tried again; one that can't be read or copied aside is never saved over (vShell says so and saves nothing until it starts again).
 - Shelf plugin 1.1.4: a shelves.json that can't be read is kept (shelves.broken-<time>.json) and never saved over with empty shelves.
+- vTrace plugin: asks the server whether anything changed and only then reads the week of changes again (needs vTrace 0.1.8; an older server is read as before).
+- The Start menu no longer builds its list again every time the Store apps are looked up and nothing changed; they are looked up every half hour, not every 10 minutes.
+- Fans plugin 1.0.11: reads its lists from the settings only when they change, not every second.
+- Glass (Blur / Frosted): a wallpaper on a network share that has gone away no longer holds the bars and windows for seconds at a time (vSuite.Core 1.0.41).
 
 ## 0.38.222 · pre-release
 
