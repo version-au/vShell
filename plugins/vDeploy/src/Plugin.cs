@@ -9,7 +9,7 @@ using vShell.Core;
 using vShell.Ui;
 
 [assembly: VShellPlugin("vdeploy", "vDeploy",
-    Description = "Your vDeploy server's Docker stacks: what's running and what has newer images on a bar or widget, !deploy in the run box to update, restart, stop or start one, vDeploy's notifications here - and your vShell colours on vDeploy's pages.",
+    Description = "Your vDeploy server's Docker stacks and Proxmox LXCs / VMs: what's running and what has updates on a bar or widget, !deploy in the run box to update, restart, stop or start one, vDeploy's notifications here - and your vShell colours on vDeploy's pages.",
     Glyph = "\uE898", Group = "Servers & network", Author = "version", Adds = "!deploy in the run box, notifications, palette commands", Types = "vDeploy")]
 
 namespace VDeploy
@@ -44,15 +44,18 @@ namespace VDeploy
         public static Poller Poll;
         public static event Action Changed;
         static BarSettings _settings;
+        static BarManager _mgr;          // for vTerm (a console from the palette)
         static Dispatcher _ui;
         static long? _seen;               // the last event shown (null = not asked yet: start from now, don't replay)
         static string _themeSent;         // what was sent last (sent again only when it changes)
         static DateTime _themeTried = DateTime.MinValue;
 
         public static BarSettings Settings { get { return _settings; } }
+        public static BarManager Manager { get { return _mgr; } }
 
         public void Load(PluginHost host)
         {
+            _mgr = host.Manager;
             _ui = Application.Current != null ? Application.Current.Dispatcher : Dispatcher.CurrentDispatcher;
             Latest = new VdSnapshot();
             host.AddModule(new PluginModule
@@ -198,6 +201,62 @@ namespace VDeploy
         }
 
         public static VdHost HostOf(VdStack s) { return Latest.Hosts.FirstOrDefault(h => h.Id == s.HostId); }
+        public static VdNode NodeOf(VdGuest g) { return Latest.Nodes.FirstOrDefault(n => n.Id == g.NodeId); }
+
+        /// <summary>Start, shut down or reboot an LXC / VM on a Proxmox node; looks again soon after. null = done.</summary>
+        public static async Task<string> GuestActAsync(VdGuest g, string action)
+        {
+            if (_settings == null) return "Set up vDeploy first";
+            string err = await VdClient.GuestActAsync(VdSettings.Of(_settings), g, action);
+            _lastManual = DateTime.MinValue;
+            RefreshNow();
+            return err;
+        }
+
+        /// <summary>
+        /// Start an LXC's app update on vDeploy (a snapshot first, raised if its script asks, its questions answered) and open its terminal page in
+        /// the browser to watch it. null = started.
+        /// </summary>
+        public static async Task<string> GuestUpdateAsync(VdGuest g)
+        {
+            if (_settings == null) return "Set up vDeploy first";
+            try
+            {
+                string page = await VdClient.GuestUpdateAsync(VdSettings.Of(_settings), g);
+                Open(HomeUrl(page.Length > 0 ? page : "/nodes/" + Uri.EscapeDataString(g.NodeId)));
+                _lastManual = DateTime.MinValue;
+                RefreshNow();
+                return null;
+            }
+            catch (Exception ex) { return VdClient.Plain(ex); }
+        }
+
+        /// <summary>Ask vDeploy to look at a node again and check its apps. null = asked.</summary>
+        public static async Task<string> CheckNodeAsync(VdNode n)
+        {
+            if (_settings == null) return "Set up vDeploy first";
+            string err = await VdClient.CheckNodeAsync(VdSettings.Of(_settings), n);
+            _lastManual = DateTime.MinValue;
+            RefreshNow();
+            return err;
+        }
+
+        /// <summary>An SSH tab in vTerm to a Proxmox node (root, as vDeploy uses it).</summary>
+        public static void ShellOnNode(BarManager mgr, VdNode n)
+        {
+            TermOpen.Host(mgr, n.Address, n.Name, "root", null, n.Address.Length == 0 ? "vDeploy has no address for " + n.Name : null);
+        }
+
+        /// <summary>A root shell inside an LXC: pct enter over SSH to its node, in vTerm.</summary>
+        public static void ConsoleIn(BarManager mgr, VdGuest g)
+        {
+            VdNode n = NodeOf(g);
+            string addr = n != null ? n.Address : "";
+            TermOpen.Host(mgr, addr, g.Node, "root", "pct enter " + g.VmId, addr.Length == 0 ? "vDeploy has no address for " + g.Node : null);
+        }
+
+        public static string NodeUrl(VdNode n) { return HomeUrl("/nodes/" + Uri.EscapeDataString(n.Id)); }
+        public static string GuestUrl(VdGuest g) { return HomeUrl("/nodes/" + Uri.EscapeDataString(g.NodeId) + "?g=" + g.VmId); }
 
         /// <summary>An SSH tab in vTerm to the stack's host (vTerm's saved connection for it, or it offers to make one - root by default).</summary>
         public static void ShellOnHost(BarManager mgr, VdStack s)
@@ -233,7 +292,7 @@ namespace VDeploy
         static void Tell(VdEvent e)
         {
             if (_settings == null || !VdSettings.Of(_settings).Notifications) return;
-            string kind = !e.Ok ? KindProblem : e.Kind == "update" ? KindUpdate : KindGood;
+            string kind = !e.Ok ? KindProblem : e.Kind is "update" or "app-update" ? KindUpdate : KindGood;
             string url = e.Link.Length > 0 ? HomeUrl(e.Link) : HomeUrl("/activity");
             try { Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null); }
             catch (Exception ex) { Log.Write("vDeploy: notify failed: " + ex.Message); }
@@ -334,6 +393,34 @@ namespace VDeploy
                     }
                 });
             }
+            foreach (VdGuest g0 in snap.Guests)
+            {
+                VdGuest g = g0;
+                string detail = Source + " · " + g.KindText + " " + g.VmId + " on " + g.Node + " · " + g.StateText;
+                string words = g.Node + " proxmox lxc vm container " + (g.App ?? "");
+                if (g.Lxc)
+                    into.Add(new PaletteCommand
+                    {
+                        Title = "Update " + (g.App ?? g.Name) + (g.Update ? " to " + g.Latest : ""), Detail = detail, Glyph = "\uE896", Source = Source, Ask = true,
+                        Words = words + " upgrade update helper script", Boost = g.Update ? 2 : 0,
+                        Run = async delegate (double n) { string err = await GuestUpdateAsync(g); return err == null ? PaletteCommand.Worked("Updating " + (g.App ?? g.Name) + " - its terminal is open in your browser") : "vDeploy: " + err; }
+                    });
+                foreach (string[] act in GuestActions(g))
+                {
+                    string[] a = act;
+                    into.Add(new PaletteCommand
+                    {
+                        Title = a[0] + " " + g.Name, Detail = detail, Glyph = a[2], Source = Source, Ask = a[1] is "shutdown" or "reboot", Words = words,
+                        Run = async delegate (double n)
+                        {
+                            if (a[1] == "open") { Open(GuestUrl(g)); return null; }
+                            if (a[1] == "console") { if (_mgr != null) ConsoleIn(_mgr, g); return null; }
+                            string err = await GuestActAsync(g, a[1]);
+                            return err == null ? PaletteCommand.Worked(a[3] + " " + g.Name) : "vDeploy: " + err;
+                        }
+                    });
+                }
+            }
             foreach (VdStack st0 in snap.Stacks)
             {
                 VdStack st = st0;
@@ -370,6 +457,21 @@ namespace VDeploy
             return l;
         }
 
+        /// <summary>An LXC / VM's actions (the update has its own): [label, action, glyph, "doing" words].</summary>
+        public static List<string[]> GuestActions(VdGuest g)
+        {
+            var l = new List<string[]>();
+            if (g.Running)
+            {
+                l.Add(new[] { "Reboot", "reboot", "\uE72C", "Rebooting" });
+                l.Add(new[] { "Shut down", "shutdown", "\uE71A", "Shutting down" });
+                if (g.Lxc) l.Add(new[] { "Console in", "console", "\uE756", "Opening" });
+            }
+            else l.Add(new[] { "Start", "start", "\uE768", "Starting" });
+            l.Add(new[] { "Open in vDeploy", "open", "\uE8A7", "Opening" });
+            return l;
+        }
+
         public static string Summary(VdSnapshot s)
         {
             if (!s.Checked) return "Not looked at yet";
@@ -377,6 +479,7 @@ namespace VDeploy
             var bits = new List<string> { s.Running + " of " + s.Total + " running" };
             if (s.Problems > 0) bits.Add(s.Problems + (s.Problems == 1 ? " problem" : " problems"));
             if (s.Updates > 0) bits.Add(s.Updates + " with newer images");
+            if (s.AppUpdates > 0) bits.Add(s.AppUpdates + (s.AppUpdates == 1 ? " LXC app update" : " LXC app updates"));
             return string.Join(" · ", bits);
         }
     }

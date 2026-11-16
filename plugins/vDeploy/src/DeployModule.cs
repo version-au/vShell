@@ -61,6 +61,36 @@ namespace VDeploy
             if (st.Item != null && st.ItemQuery != q) st.Item = null;
             Theme t = box.Theme;
 
+            if (st.Item != null && st.Item.StartsWith("g:"))
+            {
+                // an LXC / VM's actions (2.0.0): its update (opens its terminal in vDeploy), then start / reboot / shut down, console, open
+                VdGuest g = snap.Guests.FirstOrDefault(x => "g:" + x.Key == st.Item);
+                if (g == null) { st.Item = null; box.Redraw(); return; }
+                var acts = new List<string[]>();
+                if (g.Lxc) acts.Add(new[] { g.Update ? "Update to " + g.Latest : "Run its update", "update", "\uE896", "Updating" });
+                acts.AddRange(Plugin.GuestActions(g));
+                foreach (string[] act in acts)
+                {
+                    string[] ac = act;
+                    bool ask = ac[1] is "update" or "reboot" or "shutdown";
+                    string armKey = g.Key + "|" + ac[1];
+                    bool armed = st.Armed == armKey;
+                    RunPanel.Row r = box.AddRow(ac[2], armed ? "Press Enter again: " + ac[0].ToLowerInvariant() + " " + g.Name : ac[0], armed ? "confirm" : null, delegate
+                    {
+                        if (ac[1] == "open") { box.Remember(box.Text); box.Close(); Plugin.Open(Plugin.GuestUrl(g)); return; }
+                        if (ac[1] == "console") { box.Remember(box.Text); box.Close(); if (Plugin.Manager != null) Plugin.ConsoleIn(Plugin.Manager, g); return; }
+                        if (ask && st.Armed != armKey) { st.Armed = armKey; int keep = box.Selected; box.Redraw(); box.Select(keep); return; }
+                        st.Armed = null;
+                        RunGuest(box, g, ac);
+                    }, null);
+                    if (armed) r.View.Background = Theme.Faded(t.MainAccent, 25);
+                }
+                box.AddRow("\uE72B", "Back to the list", null, delegate { st.Item = null; st.Armed = null; box.Redraw(); }, null);
+                box.Status(g.Name + " - " + g.KindText + " " + g.VmId + " on " + g.Node + " - " + g.StateText + (g.AppText.Length > 0 && !g.Update ? " · " + g.AppText : ""));
+                box.Select(0);
+                return;
+            }
+
             if (st.Item != null)
             {
                 VdStack it = snap.Stacks.FirstOrDefault(x => x.Key == st.Item);
@@ -109,6 +139,27 @@ namespace VDeploy
                 }
                 catch { }
             }
+            // the helper scripts' LXCs / VMs (2.0.0): with no text the ones with an app update, else those named like it
+            var guests = snap.Guests.Where(g => q.Length == 0 ? g.Update : g.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || (g.App ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 || g.Node.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                                    .OrderBy(g => g.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase) ? 0 : 1).ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            foreach (VdGuest g0 in guests)
+            {
+                if (n++ >= 9) break;
+                VdGuest g = g0;
+                RunPanel.Row r = box.AddRow(g.Update ? "\uE896" : g.Running ? "\uE73E" : "\uE71A", g.Name + "   " + g.Node, g.KindText + " " + g.VmId + " · " + g.StateText, delegate
+                {
+                    st.Item = "g:" + g.Key; st.ItemQuery = q; st.Armed = null;
+                    box.Redraw();
+                }, null);
+                try
+                {
+                    var gl = (TextBlock)((Grid)r.View.Child).Children[0];
+                    gl.Foreground = g.Update ? (Brush)t.MainAccent : g.Running ? StatusColors.Good : (Brush)t.FgDim;
+                }
+                catch { }
+            }
+            bool anyGuests = guests.Count > 0;
+
             // automations: every one with no text, else those named like it - Enter twice runs one
             var autos = snap.Automations.Where(x => q.Length == 0 || x.Name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0).Take(Math.Max(0, 9 - Math.Min(n, 9))).ToList();
             foreach (VdAutomation x in autos)
@@ -125,10 +176,19 @@ namespace VDeploy
                 }, null);
                 if (armed) r.View.Background = Theme.Faded(t.MainAccent, 25);
             }
-            if (hits.Count == 0 && autos.Count == 0) box.Status(q.Length > 0 ? "No stack or automation in vDeploy is called anything like " + q + "." : "Nothing needs you - " + Plugin.Summary(snap) + ".");
-            else if (hits.Count == 0) box.Status("Enter twice: run it  ·  " + Plugin.Summary(snap));
+            if (hits.Count == 0 && autos.Count == 0 && !anyGuests) box.Status(q.Length > 0 ? "No stack, LXC / VM or automation in vDeploy is called anything like " + q + "." : "Nothing needs you - " + Plugin.Summary(snap) + ".");
+            else if (hits.Count == 0 && !anyGuests) box.Status("Enter twice: run it  ·  " + Plugin.Summary(snap));
             else box.Status("Enter: its actions" + (hits.Count > 9 ? "  ·  " + (hits.Count - 9) + " more - type more of the name" : "") + "  ·  " + Plugin.Summary(snap));
             box.Select(0);
+        }
+
+        static async void RunGuest(RunPanel box, VdGuest g, string[] act)
+        {
+            box.Status(act[3] + " " + g.Name + "…");
+            string err = act[1] == "update" ? await Plugin.GuestUpdateAsync(g) : await Plugin.GuestActAsync(g, act[1]);
+            if (err != null) { box.Status("vDeploy: " + err); return; }
+            box.Remember(box.Text);
+            box.Status(act[1] == "update" ? "Updating " + (g.App ?? g.Name) + " ✓ - its terminal is open in your browser" : act[3] + " " + g.Name + " ✓");
         }
 
         static async void RunAuto(RunPanel box, VdAutomation a)
@@ -173,6 +233,10 @@ namespace VDeploy
         bool ShowCount { get { return B.Get("ShowCount", true); } }
         /// <summary>vDeploy's automations under the stacks, each with Run (as the Komodo plugin's procedures).</summary>
         bool ShowAutomations { get { return B.Get("Automations", true); } }
+        /// <summary>vDeploy's Proxmox nodes and their helper-script LXCs / VMs under the stacks (2.0.0, vDeploy 0.1.25) - V: an option to hide them.</summary>
+        bool ShowNodes { get { return B.Get("Nodes", true); } }
+        int AppUpdates(VdSnapshot s) { return ShowNodes ? s.AppUpdates : 0; }
+        int NodesDown(VdSnapshot s) { return ShowNodes ? s.Nodes.Count(n => n.Seen && !n.Online) : 0; }
 
         public DeployModule(BarManager mgr, IModuleHost host, ModuleConfig cfg)
         {
@@ -208,7 +272,13 @@ namespace VDeploy
 
         string Sig(VdSnapshot s)
         {
-            var b = new StringBuilder(OnlyNeeding + "|" + GroupHosts + "|" + Count + "|" + ShowCount + "|" + ShowAutomations + "|" + _cfg.Title + "|" + s.Ok + s.Checked + s.Error + s.Updates);
+            var b = new StringBuilder(OnlyNeeding + "|" + GroupHosts + "|" + Count + "|" + ShowCount + "|" + ShowAutomations + "|" + ShowNodes + "|" + _cfg.Title + "|" + s.Ok + s.Checked + s.Error + s.Updates + "|" + s.AppUpdates);
+            if (ShowNodes)
+                foreach (VdNode n in s.Nodes)
+                {
+                    b.Append("|n").Append(n.Id).Append(n.Online).Append(n.Seen);
+                    foreach (VdGuest g in n.Guests) b.Append(",").Append(g.VmId).Append(g.Name).Append(g.Status).Append(g.AppState).Append(g.Latest);
+                }
             if (ShowAutomations)
                 foreach (VdAutomation a in s.Automations) b.Append("|a").Append(a.Id).Append(a.Name).Append(a.Running).Append(a.HasRun).Append(a.LastOk).Append(a.LastUtc.Ticks).Append(a.Schedule);
             foreach (VdHost h in s.Hosts)
@@ -246,7 +316,7 @@ namespace VDeploy
         FrameworkElement BarView(VdSnapshot s)
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            Brush dot = !s.Checked ? _t.FgDim : !s.Ok ? StatusColors.Bad : s.Problems > 0 ? StatusColors.Bad : s.Stacks.Any(x => x.Deploying != null) ? _t.MainAccent : s.Running < s.Total ? StatusColors.Warn : StatusColors.Good;
+            Brush dot = !s.Checked ? _t.FgDim : !s.Ok ? StatusColors.Bad : s.Problems + NodesDown(s) > 0 ? StatusColors.Bad : s.Stacks.Any(x => x.Deploying != null) ? _t.MainAccent : s.Running < s.Total ? StatusColors.Warn : StatusColors.Good;
             row.Children.Add(Dot(dot));
             string title = (_cfg.Title ?? "").Trim();
             if (title.Length > 0) row.Children.Add(T(title + " ", _t.FgDim, _t.FontSize));
@@ -255,11 +325,12 @@ namespace VDeploy
             else
             {
                 if (ShowCount) row.Children.Add(T(s.Running + "/" + s.Total + " running", _t.Fg, _t.FontSize));
-                if (s.Problems > 0) { var p = T("  ⚠ " + s.Problems, StatusColors.Bad, _t.FontSize); row.Children.Add(p); }
-                if (s.Updates > 0) row.Children.Add(T("  ⬆ " + s.Updates, _t.MainAccent, _t.FontSize));
-                if (!ShowCount && s.Problems == 0 && s.Updates == 0) row.Children.Add(T("vDeploy", _t.Fg, _t.FontSize));
+                int problems = s.Problems + NodesDown(s), ups = s.Updates + AppUpdates(s);
+                if (problems > 0) { var p = T("  ⚠ " + problems, StatusColors.Bad, _t.FontSize); row.Children.Add(p); }
+                if (ups > 0) row.Children.Add(T("  ⬆ " + ups, _t.MainAccent, _t.FontSize));
+                if (!ShowCount && problems == 0 && ups == 0) row.Children.Add(T("vDeploy", _t.Fg, _t.FontSize));
             }
-            ToolTip = !s.Ok ? "vDeploy: " + (s.Checked ? s.Error : "looking…") : "vDeploy: " + Plugin.Summary(s) + "\nClick for the stacks";
+            ToolTip = !s.Ok ? "vDeploy: " + (s.Checked ? s.Error : "looking…") : "vDeploy: " + Plugin.Summary(s) + "\nClick for the stacks" + (ShowNodes && s.Nodes.Count > 0 ? " and the Proxmox nodes" : "");
             return row;
         }
 
@@ -282,6 +353,8 @@ namespace VDeploy
             else
             {
                 int shown = 0, left = 0;
+                bool both = ShowNodes && s.Nodes.Count > 0 && s.Hosts.Count > 0;
+                if (both) root.Children.Add(Section("Docker Hosts", fs, true));
                 foreach (VdHost h in s.Hosts)
                 {
                     var stacks = h.Stacks.Where(k => !k.Other && (!OnlyNeeding || k.Problem || k.Updates.Count > 0 || k.Deploying != null)).ToList();
@@ -297,7 +370,32 @@ namespace VDeploy
                         root.Children.Add(StackRow(k, fs, popup));
                     }
                 }
-                if (shown == 0) root.Children.Add(T(OnlyNeeding ? "Nothing needs you - " + Plugin.Summary(s) : "No stacks yet", _t.FgDim, fs - 1));
+                if (shown == 0 && !(OnlyNeeding && ShowNodes && s.Nodes.Count > 0)) root.Children.Add(T(OnlyNeeding ? "Nothing needs you - " + Plugin.Summary(s) : "No stacks yet", _t.FgDim, fs - 1));
+
+                // the Proxmox nodes and the helper scripts' LXCs / VMs on them (vDeploy 0.1.25)
+                if (ShowNodes && s.Nodes.Count > 0)
+                {
+                    int before = root.Children.Count;
+                    if (both) root.Children.Add(Section("Proxmox Nodes", fs, false));
+                    int head = root.Children.Count;
+                    foreach (VdNode n in s.Nodes)
+                    {
+                        var guests = n.Guests.Where(g => !OnlyNeeding || g.Update || !g.NodeOnline).ToList();
+                        if (guests.Count == 0 && OnlyNeeding && (n.Online || !n.Seen)) continue;
+                        if (GroupHosts || popup) root.Children.Add(NodeRow(n, fs, root.Children.Count == 0 || (popup && root.Children.Count <= 1)));
+                        foreach (VdGuest g in guests)
+                        {
+                            if (shown >= Count && !popup) { left++; continue; }
+                            shown++;
+                            root.Children.Add(GuestRow(g, fs, popup));
+                        }
+                    }
+                    if (root.Children.Count == head && OnlyNeeding)
+                    {
+                        if (both) root.Children.RemoveRange(before, root.Children.Count - before);
+                        if (shown == 0) root.Children.Add(T("Nothing needs you - " + Plugin.Summary(s), _t.FgDim, fs - 1));
+                    }
+                }
                 if (left > 0) root.Children.Add(T("and " + left + " more", _t.FgDim, fs - 1.5));
 
                 // automations, each with Run - only the ones that failed last time when it shows only what needs you
@@ -335,6 +433,153 @@ namespace VDeploy
                 return scroll;
             }
             return root;
+        }
+
+        /// <summary>"Docker Hosts" / "Proxmox Nodes" over their parts, as vDeploy's side panel (only when both show).</summary>
+        FrameworkElement Section(string text, double fs, bool first)
+        {
+            var h = T(text.ToUpperInvariant(), _t.FgDim, fs - 2.5, true);
+            h.Margin = new Thickness(0, first ? 0 : 12, 0, 2);
+            return h;
+        }
+
+        /// <summary>A node, as vDeploy's side panel: its server icon (accent), dot, name, how many LXCs / VMs ("offline" when it isn't answering).</summary>
+        FrameworkElement NodeRow(VdNode n, double fs, bool first)
+        {
+            var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, first ? 0 : 8, 0, 3), Background = Brushes.Transparent };
+            bool offline = n.Seen && !n.Online;
+            bool busy = _busy.Contains("node|" + n.Id);
+            var count = T(busy ? "asking…" : offline ? "offline" : n.Guests.Count.ToString(), offline ? StatusColors.Bad : _t.FgDim, fs - 1.5);
+            count.Margin = new Thickness(8, 0, 0, 0);
+            DockPanel.SetDock(count, Dock.Right);
+            line.Children.Add(count);
+            var name = new StackPanel { Orientation = Orientation.Horizontal };
+            FrameworkElement icon = VdIcons.Make("server", Px(fs, 16), _t.MainAccent);
+            icon.Margin = new Thickness(0, 0, 7, 0);
+            name.Children.Add(icon);
+            name.Children.Add(Dot(!n.Seen ? _t.FgDim : n.Online ? StatusColors.Good : (Brush)StatusColors.Bad, 7));
+            name.Children.Add(T(n.Name, _t.Fg, fs + 0.5, true));
+            line.Children.Add(name);
+            line.ToolTip = n.Name + " - Proxmox VE " + n.Version + (offline ? " - not answering: " + n.Problem : "") +
+                           (n.Others > 0 ? "\n" + n.Others + " other LXCs / VMs aren't shown (only the helper scripts')" : "") +
+                           "\nClick: open it in vDeploy · right-click: check for updates, a shell on it, add a LXC / VM";
+            line.Cursor = Cursors.Hand;
+            line.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
+            line.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; Close(); Plugin.Open(Plugin.NodeUrl(n)); };
+            line.MouseRightButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; ShowMenu(line, NodeMenu(n)); };
+            return line;
+        }
+
+        /// <summary>An LXC / VM under its node: its icon, dot, name (⬆ an app update), its state or the update; Update in the popup.</summary>
+        FrameworkElement GuestRow(VdGuest g, double fs, bool popup)
+        {
+            var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 2, 0, 2), Background = Brushes.Transparent };
+            bool busy = _busy.Contains(g.Key);
+            if (popup && g.Update && !busy && g.NodeOnline)
+            {
+                var pill = Pills.Make(_t, "\uE896", "Update", (g.App ?? g.Name) + " " + g.Installed + " → " + g.Latest + " - a snapshot first; its terminal opens in vDeploy", false, delegate { UpdateGuest(g); }, false);
+                pill.Margin = new Thickness(8, 0, 0, 0);
+                DockPanel.SetDock(pill, Dock.Right);
+                line.Children.Add(pill);
+            }
+            string text = busy ? "asking…" : g.Update ? g.Installed + " → " + g.Latest : !g.NodeOnline ? "" : g.Running ? (g.Cpu > 0 ? Math.Round(g.Cpu * 100) + "% · " : "") + Mb(g.MemUsed) : "stopped";
+            var state = T(text, g.Update && !busy ? _t.MainAccent : _t.FgDim, fs - 1.5);
+            state.Margin = new Thickness(8, 0, 0, 0);
+            DockPanel.SetDock(state, Dock.Right);
+            line.Children.Add(state);
+            var name = new StackPanel { Orientation = Orientation.Horizontal };
+            name.Children.Add(new Border { Width = Px(fs, 18) });       // under the node's name, as a stack under its host
+            FrameworkElement icon = VdIcons.Make(g.Lxc ? "box" : "vm", Px(fs, 13), _t.Fg, 0.75);
+            icon.Margin = new Thickness(0, 0, 7, 0);
+            name.Children.Add(icon);
+            name.Children.Add(Dot(!g.NodeOnline ? _t.FgDim : g.Running ? StatusColors.Good : (Brush)_t.FgDim, 7));
+            name.Children.Add(T(g.Name, _t.Fg, fs));
+            if (g.Update) name.Children.Add(T(" ⬆", _t.MainAccent, fs - 1));
+            line.Children.Add(name);
+            line.ToolTip = g.KindText + " " + g.VmId + " " + g.Name + " on " + g.Node + " - " + (g.Running ? "running" : "stopped") +
+                           (g.AppText.Length > 0 ? "\n" + g.AppText : "") + (g.Tags.Count > 0 ? "\n" + string.Join(", ", g.Tags) : "") +
+                           "\nClick: open it in vDeploy · right-click: " + (g.Lxc ? "update, " : "") + (g.Running ? "reboot, shut down" + (g.Lxc ? ", a console in vTerm" : "") : "start");
+            line.Cursor = Cursors.Hand;
+            line.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
+            line.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; Close(); Plugin.Open(Plugin.GuestUrl(g)); };
+            line.MouseRightButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; ShowMenu(line, GuestMenu(g)); };
+            return line;
+        }
+
+        ContextMenu NodeMenu(VdNode n)
+        {
+            var m = new ContextMenu();
+            m.Items.Add(new MenuItem { Header = n.Name + " - " + (n.Seen && !n.Online ? "not answering" : n.Guests.Count + " LXCs / VMs"), IsEnabled = false });
+            m.Items.Add(new Separator());
+            m.Items.Add(Item("Check for updates", delegate { CheckNode(n); }, n.Online, n.Online ? "Looks at it again and asks each LXC about its app" : "It isn't answering"));
+            m.Items.Add(Item("Open shell on " + n.Name, delegate { Plugin.ShellOnNode(_mgr, n); }));
+            m.Items.Add(Item("Add a LXC / VM…", delegate { Close(); Plugin.Open(Plugin.HomeUrl("/nodes/" + Uri.EscapeDataString(n.Id) + "/add")); }, true, "vDeploy's page: pick a helper script, its settings, run it"));
+            m.Items.Add(Item("Open in vDeploy", delegate { Close(); Plugin.Open(Plugin.NodeUrl(n)); }));
+            return m;
+        }
+
+        ContextMenu GuestMenu(VdGuest g)
+        {
+            var m = new ContextMenu();
+            m.Items.Add(new MenuItem { Header = g.Name + "  (" + g.KindText + " " + g.VmId + " on " + g.Node + ") - " + g.StateText, IsEnabled = false });
+            m.Items.Add(new Separator());
+            bool up = g.NodeOnline;
+            if (g.Lxc)
+                m.Items.Add(Item(g.Update ? "Update to " + g.Latest + "…" : "Run its update…", delegate { UpdateGuest(g); }, up,
+                    "A snapshot first, its cores and memory raised if its script asks for more - its terminal opens in vDeploy"));
+            if (g.Running)
+            {
+                m.Items.Add(Item("Reboot…", delegate { if (Questions.YesNo(null, "Reboot " + g.Name + " (" + g.KindText + " " + g.VmId + " on " + g.Node + ")?", Plugin.Source) == MessageBoxResult.Yes) GuestAct(g, "reboot"); }, up));
+                m.Items.Add(Item("Shut down…", delegate { if (Questions.YesNo(null, "Shut down " + g.Name + " (" + g.KindText + " " + g.VmId + " on " + g.Node + ")? A clean shutdown - it's turned off if it hasn't stopped after 2 minutes.", Plugin.Source) == MessageBoxResult.Yes) GuestAct(g, "shutdown"); }, up));
+            }
+            else m.Items.Add(Item("Start", delegate { GuestAct(g, "start"); }, up));
+            m.Items.Add(new Separator());
+            if (g.Lxc) m.Items.Add(Item("Open console in the LXC", delegate { Plugin.ConsoleIn(_mgr, g); }, g.Running && up, g.Running ? "pct enter " + g.VmId + " over SSH to " + g.Node + ", in vTerm" : "It isn't running"));
+            VdNode n = Plugin.NodeOf(g);
+            if (n != null) m.Items.Add(Item("Open shell on " + g.Node, delegate { Plugin.ShellOnNode(_mgr, n); }));
+            m.Items.Add(Item("Open in vDeploy", delegate { Close(); Plugin.Open(Plugin.GuestUrl(g)); }));
+            return m;
+        }
+
+        async void UpdateGuest(VdGuest g)
+        {
+            string what = (g.App ?? g.Name) + (g.Update ? " " + g.Installed + " → " + g.Latest : "");
+            if (Questions.YesNo(null, "Update " + what + " (LXC " + g.VmId + " on " + g.Node + ")?\n\nA snapshot first, its cores and memory raised if its script asks for more (put back after). Its terminal opens in vDeploy to watch it.", Plugin.Source) != MessageBoxResult.Yes) return;
+            _busy.Add(g.Key);
+            _shown = _popShown = "";
+            Refresh();
+            Close();
+            string err = await Plugin.GuestUpdateAsync(g);
+            _busy.Remove(g.Key);
+            _shown = _popShown = "";
+            Refresh();
+            if (err != null) Questions.Tell(null, "vDeploy couldn't update " + g.Name + ": " + err, Plugin.Source);
+        }
+
+        async void GuestAct(VdGuest g, string action)
+        {
+            _busy.Add(g.Key);
+            _shown = _popShown = "";
+            Refresh();
+            string err = await Plugin.GuestActAsync(g, action);
+            _busy.Remove(g.Key);
+            _shown = _popShown = "";
+            Refresh();
+            if (err != null) Questions.Tell(null, err, Plugin.Source);
+        }
+
+        async void CheckNode(VdNode n)
+        {
+            string key = "node|" + n.Id;
+            _busy.Add(key);
+            _shown = _popShown = "";
+            Refresh();
+            string err = await Plugin.CheckNodeAsync(n);
+            await System.Threading.Tasks.Task.Delay(3000);
+            _busy.Remove(key);
+            _shown = _popShown = "";
+            Refresh();
+            if (err != null) Questions.Tell(null, "vDeploy couldn't check " + n.Name + ": " + err, Plugin.Source);
         }
 
         /// <summary>Stacks whose containers are shown (every popup and widget of the plugin, until vShell closes).</summary>
@@ -668,6 +913,8 @@ namespace VDeploy
                 p.Slider("How many", 1, 60, delegate { return b.Get("Count", 12.0); }, delegate (double v) { b.Set("Count", Math.Round(v)); });
                 p.Note("Click a stack to open it in vDeploy; its arrow shows its containers; right-click a stack or a container for its actions, a shell in vTerm and its log.");
             }
+            p.Check("Show the Proxmox nodes and their LXCs / VMs", delegate { return b.Get("Nodes", true); }, delegate (bool v) { b.Set("Nodes", v); });
+            p.Note("vDeploy's Proxmox nodes under the stacks, with the LXCs and VMs the helper scripts made: ⬆ when an app has an update (Update opens its terminal in vDeploy), right-click for start, shut down, reboot and a console in vTerm. Off: only the Docker stacks (and the bar's ⬆ / ⚠ leave them out).");
             p.Check("Show the automations (with a Run button)", delegate { return b.Get("Automations", true); }, delegate (bool v) { b.Set("Automations", v); });
             p.Note("vDeploy's automations under the stacks - Run asks first, then vDeploy runs it (its page shows each step). With \"Only stacks that need you\", only automations whose last run failed show.");
         }

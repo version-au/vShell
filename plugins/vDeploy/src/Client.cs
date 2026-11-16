@@ -99,6 +99,62 @@ namespace VDeploy
         public List<VdStack> Stacks = new List<VdStack>();
     }
 
+    /// <summary>A Proxmox node vDeploy looks after (vDeploy 0.1.25's /overview nodes) - only its helper-script LXCs and VMs.</summary>
+    public sealed class VdNode
+    {
+        public string Id = "", Name = "", Address = "", Problem = "", Version = "";
+        public bool Online, Seen;
+        public double Cpu;
+        public int Cores, Others;
+        public long MemUsed, MemTotal;
+        public List<VdGuest> Guests = new List<VdGuest>();
+    }
+
+    /// <summary>An LXC or VM on a node, with its app's update check.</summary>
+    public sealed class VdGuest
+    {
+        public string NodeId = "", Node = "", Name = "", Kind = "lxc", Status = "";
+        public int VmId, Cores;
+        public bool Running, NodeOnline = true;
+        public double Cpu;
+        public long MemUsed, MemTotal;
+        public List<string> Tags = new List<string>();
+        /// <summary>Its app (null: not checked) - App, AppState (available, current, other, stopped, unknown), Installed, Latest.</summary>
+        public string App, AppState, Installed, Latest, Why;
+
+        public bool Lxc { get { return Kind == "lxc"; } }
+        public bool Update { get { return AppState == "available"; } }
+        public string Key { get { return NodeId + "/" + VmId; } }
+        public string KindText { get { return Lxc ? "LXC" : "VM"; } }
+        public string Look { get { return !NodeOnline ? "warn" : Running ? "ok" : "off"; } }
+        /// <summary>"running", "stopped", "1.34.3 → 1.35.0" …</summary>
+        public string StateText
+        {
+            get
+            {
+                if (!NodeOnline) return "node not answering";
+                if (Update) return "update " + Installed + " → " + Latest;
+                return Running ? "running" : Status == "" ? "stopped" : Status;
+            }
+        }
+        /// <summary>What its app check found, for a tooltip.</summary>
+        public string AppText
+        {
+            get
+            {
+                if (AppState == null) return "";
+                return AppState switch
+                {
+                    "available" => (App ?? Name) + " " + Installed + " → " + Latest,
+                    "current" => (App ?? Name) + " " + Installed + " · up to date",
+                    "other" => (App ?? Name) + " · updates via apt / its own",
+                    "stopped" => "not checked (stopped)",
+                    _ => "version not known" + (string.IsNullOrEmpty(Why) ? "" : " - " + Why),
+                };
+            }
+        }
+    }
+
     /// <summary>One look at vDeploy (/api/v1/overview).</summary>
     public sealed class VdSnapshot
     {
@@ -106,11 +162,13 @@ namespace VDeploy
         public string Error = "", Version = "";
         public List<VdHost> Hosts = new List<VdHost>();
         public List<VdAutomation> Automations = new List<VdAutomation>();
-        public int Updates;
+        public List<VdNode> Nodes = new List<VdNode>();
+        public int Updates, AppUpdates;
         public long LastEvent;
         public DateTime AtUtc;
 
         public IEnumerable<VdStack> Stacks { get { return Hosts.SelectMany(h => h.Stacks).Where(s => !s.Other); } }
+        public IEnumerable<VdGuest> Guests { get { return Nodes.SelectMany(n => n.Guests); } }
         public int Running { get { return Hosts.Sum(h => h.Stacks.Sum(s => s.Running)); } }
         public int Total { get { return Hosts.Sum(h => h.Stacks.Sum(s => s.Total)); } }
         public int Problems { get { return Stacks.Count(s => s.Problem) + Hosts.Count(h => h.Seen && !h.Online && h.Stacks.Count == 0); } }
@@ -177,6 +235,37 @@ namespace VDeploy
                 JsonElement r = d.RootElement;
                 snap.Version = JsonValue.Str(r, "version");
                 snap.Updates = (int)JsonValue.Num(r, "updates");
+                snap.AppUpdates = (int)JsonValue.Num(r, "appUpdates");
+                if (r.TryGetProperty("nodes", out JsonElement nodes) && nodes.ValueKind == JsonValueKind.Array)   // vDeploy 0.1.25
+                    foreach (JsonElement n in nodes.EnumerateArray())
+                    {
+                        var node = new VdNode
+                        {
+                            Id = JsonValue.Str(n, "id"), Name = JsonValue.Str(n, "name"), Address = JsonValue.Str(n, "address"), Problem = JsonValue.Str(n, "problem"),
+                            Version = JsonValue.Str(n, "version"), Online = JsonValue.Bool(n, "online", false), Seen = JsonValue.Bool(n, "seen", false),
+                            Cpu = JsonValue.Num(n, "cpu"), Cores = (int)JsonValue.Num(n, "cores"), Others = (int)JsonValue.Num(n, "others"),
+                            MemUsed = (long)JsonValue.Num(n, "memUsed"), MemTotal = (long)JsonValue.Num(n, "memTotal"),
+                        };
+                        if (n.TryGetProperty("guests", out JsonElement gs) && gs.ValueKind == JsonValueKind.Array)
+                            foreach (JsonElement g in gs.EnumerateArray())
+                            {
+                                var guest = new VdGuest
+                                {
+                                    NodeId = node.Id, Node = node.Name, NodeOnline = node.Online || !node.Seen, VmId = (int)JsonValue.Num(g, "vmid"), Name = JsonValue.Str(g, "name"),
+                                    Kind = JsonValue.Str(g, "kind"), Status = JsonValue.Str(g, "status"), Running = JsonValue.Bool(g, "running", false),
+                                    Cpu = JsonValue.Num(g, "cpu"), Cores = (int)JsonValue.Num(g, "cores"), MemUsed = (long)JsonValue.Num(g, "memUsed"), MemTotal = (long)JsonValue.Num(g, "memTotal"),
+                                };
+                                if (g.TryGetProperty("tags", out JsonElement tags) && tags.ValueKind == JsonValueKind.Array)
+                                    foreach (JsonElement x in tags.EnumerateArray()) if (x.ValueKind == JsonValueKind.String) guest.Tags.Add(x.GetString());
+                                if (g.TryGetProperty("app", out JsonElement app) && app.ValueKind == JsonValueKind.Object)
+                                {
+                                    guest.App = JsonValue.Str(app, "name"); guest.AppState = JsonValue.Str(app, "state");
+                                    guest.Installed = JsonValue.Str(app, "installed"); guest.Latest = JsonValue.Str(app, "latest"); guest.Why = JsonValue.Str(app, "why");
+                                }
+                                node.Guests.Add(guest);
+                            }
+                        snap.Nodes.Add(node);
+                    }
                 snap.LastEvent = (long)JsonValue.Num(r, "lastEvent");
                 if (r.TryGetProperty("hosts", out JsonElement hosts) && hosts.ValueKind == JsonValueKind.Array)
                     foreach (JsonElement h in hosts.EnumerateArray())
@@ -323,6 +412,31 @@ namespace VDeploy
         public static async Task<string> RunAutomationAsync(VdSettings c, VdAutomation a)
         {
             try { await Send(Req(HttpMethod.Post, c, "/api/v1/automations/" + Uri.EscapeDataString(a.Id) + "/run"), CancellationToken.None).ConfigureAwait(false); return null; }
+            catch (Exception ex) { return Plain(ex); }
+        }
+
+        /// <summary>start, shutdown or reboot an LXC / VM (vDeploy 0.1.25). null = done, else why not.</summary>
+        public static async Task<string> GuestActAsync(VdSettings c, VdGuest g, string action)
+        {
+            try
+            {
+                await Send(Req(HttpMethod.Post, c, "/api/v1/nodes/" + Uri.EscapeDataString(g.NodeId) + "/guests/" + g.VmId.ToString(CultureInfo.InvariantCulture) + "/" + action), CancellationToken.None).ConfigureAwait(false);
+                return null;
+            }
+            catch (Exception ex) { return Plain(ex); }
+        }
+
+        /// <summary>Start an LXC's app update on vDeploy: the terminal page's path (to open in the browser), or throws why not.</summary>
+        public static async Task<string> GuestUpdateAsync(VdSettings c, VdGuest g)
+        {
+            string json = await Send(Req(HttpMethod.Post, c, "/api/v1/nodes/" + Uri.EscapeDataString(g.NodeId) + "/guests/" + g.VmId.ToString(CultureInfo.InvariantCulture) + "/update"), CancellationToken.None).ConfigureAwait(false);
+            using (JsonDocument d = JsonDocument.Parse(json)) return JsonValue.Str(d.RootElement, "terminal");
+        }
+
+        /// <summary>Look at a node again and check its apps (vDeploy 0.1.25). null = asked.</summary>
+        public static async Task<string> CheckNodeAsync(VdSettings c, VdNode n)
+        {
+            try { await Send(Req(HttpMethod.Post, c, "/api/v1/nodes/" + Uri.EscapeDataString(n.Id) + "/check"), CancellationToken.None).ConfigureAwait(false); return null; }
             catch (Exception ex) { return Plain(ex); }
         }
 

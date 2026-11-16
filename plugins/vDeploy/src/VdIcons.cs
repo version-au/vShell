@@ -27,7 +27,20 @@ namespace VDeploy
                     gg.Children.Add(Geometry.Parse("M5 4.75h.1M5 11.25h.1"));
                     g = gg;
                     break;
-                case "stack": g = Geometry.Parse("M8 2l6 3.2-6 3.2-6-3.2zM2 8.2l6 3.2 6-3.2M2 11l6 3.2 6-3.2"); break;
+                case "server":     // a Proxmox node (vDeploy 0.1.20's side panel)
+                    var sg = new GeometryGroup();
+                    sg.Children.Add(new RectangleGeometry(new Rect(2.5, 2, 11, 5), 1, 1));
+                    sg.Children.Add(new RectangleGeometry(new Rect(2.5, 9, 11, 5), 1, 1));
+                    sg.Children.Add(Geometry.Parse("M5 4.5h4M5 11.5h4M11.2 4.5h.1M11.2 11.5h.1"));
+                    g = sg;
+                    break;
+                case "vm":
+                    var vg = new GeometryGroup();
+                    vg.Children.Add(new RectangleGeometry(new Rect(2, 2.5, 12, 9), 1, 1));
+                    vg.Children.Add(Geometry.Parse("M6 14h4M8 11.5V14"));
+                    g = vg;
+                    break;
+                case "stack": g =Geometry.Parse("M8 2l6 3.2-6 3.2-6-3.2zM2 8.2l6 3.2 6-3.2M2 11l6 3.2 6-3.2"); break;
                 case "box": g = Geometry.Parse("M2.5 5L8 2.5 13.5 5v6L8 13.5 2.5 11zM2.5 5L8 7.5 13.5 5M8 7.5v6"); break;
                 case "chev-right": g = Geometry.Parse("M6 4l4 4-4 4"); break;
                 case "chev-down": g = Geometry.Parse("M4 6l4 4 4-4"); break;

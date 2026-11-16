@@ -3373,3 +3373,24 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 5. Settings > Plugins > UniFi: no "Account for vTrace's history" block; the rest as before.
 ## 0.38.221 - vTrace plugin 2.1.1
 1. With vTrace 0.1.4 reading vPatch: the vTrace widget's / popup's rows from vPatch name their source vPatch (not "vpatch").
+
+## 0.38.222 - vDeploy plugin 2.0.0: Proxmox nodes (needs vDeploy 0.1.25)
+1. A vDeploy module (bar popup or widget) with vDeploy 0.1.25+ that has Proxmox nodes: "DOCKER HOSTS" over the hosts and stacks, "PROXMOX NODES"
+   over each node (server icon in the accent, dot, name, how many LXCs / VMs or "offline") and its helper-script LXCs / VMs (box or screen
+   icon, dot - green running, grey stopped, name, ⬆ when its app has an update; right: "1.34.3 → 1.35.0" in the accent, else CPU · memory,
+   or "stopped"). The headings only show when there are both. Hover: kind, ID, node, state, the app check ("updates via apt / its own" …).
+2. Popup: Update on an LXC with an update -> asks -> vDeploy's terminal page for it opens in the browser (a snapshot first, raised if its
+   script asks). Click an LXC / VM: vDeploy's node page with it picked; click a node: its page.
+3. Right-click an LXC / VM: Update to x… / Run its update… (LXCs), Reboot… / Shut down… (asks) or Start, Open console in the LXC (vTerm:
+   SSH root@node, `pct enter <id>` - vTerm offers to save the connection), Open shell on <node>, Open in vDeploy. "asking…" while it
+   works; a refusal (e.g. the node not answering) says why.
+4. Right-click a node: Check for updates (asks vDeploy to look again and check its apps; "asking…" for a moment), Open shell on it, Add
+   a LXC / VM… (vDeploy's page), Open in vDeploy.
+5. Module settings: "Show the Proxmox nodes and their LXCs / VMs" (on) - off: only the stacks, and the bar's ⬆ / ⚠ leave the nodes out.
+   "Only stacks that need you": only LXCs with an update and nodes not answering.
+6. Bar: ⬆ counts stacks with newer images + LXC apps with an update; ⚠ includes nodes not answering; tooltip "… · 1 LXC app update".
+7. !deploy: with no text also the LXCs with an update; !deploy vault - LXCs / VMs named like it (or their app or node). Enter: its
+   actions (Update / Reboot / Shut down - Enter twice; Start; Console in; Open in vDeploy).
+8. Palette: "Update Vaultwarden to 1.35.0", "Reboot pihole", "Shut down …", "Console in …", "Open in vDeploy" per LXC / VM.
+9. Notifications: vDeploy's "Vaultwarden 1.35.0 is out" (app-update) shows as the "Newer images" kind.
+10. An older vDeploy (no nodes in /overview): everything as 1.3.0.
