@@ -19,7 +19,7 @@ namespace vShell.Ui
 
     /// <summary>
     /// A soft accent glow along one edge of a widget, on top of everything, that clicks go through: shows which edges a dragged
-    /// widget lined up with. Brightest at the edge and fading inward, its ends fading out before the widget's rounded corners;
+    /// widget lined up with. Brightest at the edge and fading inward, along the straight part of the edge only (it stops where the rounded corners start);
     /// it fades in while sliding out onto the edge, and fades out quickly.
     /// </summary>
     sealed class SnapGlow : Window
@@ -92,17 +92,22 @@ namespace vShell.Ui
         public void ShowGlow(GlowSpec g, double scale)
         {
             int band = Math.Max(3, (int)Math.Round(BandDip * scale));
-            int len = Math.Max(1, g.To - g.From);
+            // only the straight part of the edge: it stops where the rounded corners start (0.38.225, V - it ran on over the curves)
+            int full = Math.Max(1, g.To - g.From);
+            int corner = g.Radius > 0 ? (int)Math.Ceiling(g.Radius * scale) : 0;
+            corner = Math.Min(corner, Math.Max(0, (full - (int)Math.Round(12 * scale)) / 2));     // a tiny box keeps a short glow in its middle
+            int from = g.From + corner, len = Math.Max(1, full - 2 * corner);
             int a = g.Dir > 0 ? g.At : g.At - band;
             if (!_shaped || g.Vertical != _vertical || g.Dir != _dir) Shape(g.Vertical, g.Dir);
-            double fade = Math.Max(0.03, Math.Min(0.45, Math.Max(10, g.Radius + 4) * scale / len));
+            // the tips just soften (a few pixels) - inside the straight part, not over the corner
+            double fade = Math.Max(0.02, Math.Min(0.3, 8 * scale / len));
             _tipIn.Offset = fade;
             _tipOut.Offset = 1 - fade;
             if (!IsVisible) Show();
             if (_hwnd == IntPtr.Zero) return;
-            const uint flags =Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW;
-            if (g.Vertical) Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, a, g.From, band, len, flags);
-            else Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, g.From, a, len, band, flags);
+            const uint flags = Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW;
+            if (g.Vertical) Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, a, from, band, len, flags);
+            else Native.SetWindowPos(_hwnd, Native.HWND_TOPMOST, from, a, len, band, flags);
             if (g.Key != _key) { _key = g.Key; Enter(g); }
         }
 
@@ -169,7 +174,7 @@ namespace vShell.Ui
         static bool _freeDrag;
 
         /// <summary>A box that moves with the drag, as an offset from the dragged widget's box (device pixels).</summary>
-        struct Part { public int DX, DY, W, H; public bool Outer; }
+        struct Part { public int DX, DY, W, H; public bool Outer; public double Radius; }     // Radius: its corners (the glow stops before them)
 
         // a group drag: the whole group's outline (Outer) and each widget in it, relative to the dragged one; null = one widget
         static List<Part> _parts;
@@ -193,7 +198,7 @@ namespace vShell.Ui
             int gap = (int)Math.Round(s.WidgetGap * scale), edge = (int)Math.Round(s.WidgetEdgeGap * scale), reach = (int)Math.Round(9 * scale);
 
             // what moves: this widget alone, or the group's outline and each widget in it
-            var parts = _parts != null && _parts.Count > 0 ? _parts : new List<Part> { new Part { DX = 0, DY = 0, W = w, H = h, Outer = true } };
+            var parts = _parts != null && _parts.Count > 0 ? _parts : new List<Part> { new Part { DX = 0, DY = 0, W = w, H = h, Outer = true, Radius = me.Cfg.CornerRadius } };
             Part outer = parts[0];
             foreach (Part pt in parts) if (pt.Outer) { outer = pt; break; }
 
@@ -289,7 +294,7 @@ namespace vShell.Ui
             Part pt = parts[c.SPart];
             var box = new RECT { Left = L + pt.DX, Top = T + pt.DY, Right = L + pt.DX + pt.W, Bottom = T + pt.DY + pt.H };
             string to = c.TKind != 0 ? "w" + c.TId + ":" + c.TKind : "screen";
-            _glows[slot].ShowGlow(EdgeOf(box, vertical, c.SKind, radius, "me" + c.SPart + ">" + to), scale);
+            _glows[slot].ShowGlow(EdgeOf(box, vertical, c.SKind, pt.Radius, "me" + c.SPart + ">" + to), scale);
             if (c.TKind != 0) _glows[slot + 1].ShowGlow(EdgeOf(c.TR, vertical, c.TKind, c.TRad, "w" + c.TId), scale);
             else _glows[slot + 1].HideGlow();
         }
@@ -717,15 +722,17 @@ namespace vShell.Ui
                     var parts = new List<Part>();
                     int l = mine.Left, t = mine.Top, r = mine.Right, b = mine.Bottom;
                     parts.Add(new Part());      // the outline, filled in below
-                    parts.Add(new Part { DX = 0, DY = 0, W = mine.Width, H = mine.Height });
+                    parts.Add(new Part { DX = 0, DY = 0, W = mine.Width, H = mine.Height, Radius = me.Cfg.CornerRadius });
                     foreach (WidgetWindow f in list)
                     {
                         RECT fr;
                         if (!f.TryVisibleRect(out fr)) continue;
-                        parts.Add(new Part { DX = fr.Left - mine.Left, DY = fr.Top - mine.Top, W = fr.Width, H = fr.Height });
+                        parts.Add(new Part { DX = fr.Left - mine.Left, DY = fr.Top - mine.Top, W = fr.Width, H = fr.Height, Radius = f.Cfg.CornerRadius });
                         l = Math.Min(l, fr.Left); t = Math.Min(t, fr.Top); r = Math.Max(r, fr.Right); b = Math.Max(b, fr.Bottom);
                     }
-                    parts[0] = new Part { DX = l - mine.Left, DY = t - mine.Top, W = r - l, H = b - t, Outer = true };
+                    double maxR = 0;
+                    foreach (Part pp in parts) maxR = Math.Max(maxR, pp.Radius);
+                    parts[0] = new Part { DX = l - mine.Left, DY = t - mine.Top, W = r - l, H = b - t, Outer = true, Radius = maxR };
                     _parts = parts;
                 }
             }

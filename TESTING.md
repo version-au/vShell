@@ -3440,3 +3440,7 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 6. Lock a widget (right-click > Lock position), press on an empty part of it and drag: an accent outline and "Locked · right-click to
    unlock" at its bottom, the "no" cursor; fades after about a second. A plain click (no drag) on it, or on a module (a link, a
    button), shows nothing. Unlocked widgets drag as before.
+## 0.38.225 - the snap glow and rounded corners
+1. Two widgets with rounded corners (e.g. 16): drag one so its edge lines up with the other's - both edges glow only along their straight part, starting and ending where the curves begin, with short soft tips; nothing over the corners.
+2. Square corners (0): the glow runs the whole edge, as before. A tiny widget (corners bigger than half its side) keeps a short glow in the middle of the edge.
+3. A group drag (Ctrl+click several, drag one): each widget's edge stops before its own corners; the group's outline stops before the largest corner in the group. Resizing (Resize, then drag an edge): the same.
