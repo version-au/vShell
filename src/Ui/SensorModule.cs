@@ -86,6 +86,9 @@ namespace vShell.Ui
             _view.InvalidateMeasure();
         }
 
+        /// <summary>Its widget is hidden: Update takes the sample but draws nothing (WidgetWindow.UpdateStats).</summary>
+        internal bool Quiet;
+
         public void Update(bool addSample)
         {
             HwReading r = HwInfo.Find(_cfg.SensorKey);
@@ -122,6 +125,7 @@ namespace vShell.Ui
             }
 
             if (addSample && r != null) _hist.Add(pct);
+            if (Quiet) return;          // its widget is hidden: the sample only, nothing drawn (0.38.224)
             if (Gauge)
             {
                 string unitG = r == null ? "" : (string.IsNullOrEmpty(_cfg.SensorUnit) ? r.Unit : _cfg.SensorUnit);

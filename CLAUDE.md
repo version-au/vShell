@@ -168,6 +168,7 @@ section (`NotifySection`, `KindPick`) + `Notify.Kinds` keys + `NotifyWatch.Hook`
 - **Widget rows**: modules with `IMultiRow.RowCount == 0` size themselves and sit at the top of their row; others get fixed rows.
   A module that hides itself (Visibility Collapsed + `host.ContentChanged()`) takes its row with it; an all-hidden widget hides.
 - **Module refreshes**: rebuild only when what's shown changed (content signature / Stamp), not on every poll.
+- **Hidden widgets rest** (0.38.224, after desk-widgets' IsCovered): `ModuleVisibility.Covered` also says yes when the taskbar's app windows (`AppWindows`, set by BarManager - an overlay is never on it) in front of the window (a `GW_HWNDPREV` walk) hide all but 5 % of it (`HiddenBehindApps`, DWM frame bounds, cached 500 ms per window). `WidgetWindow.UpdateStats` then sets `Quiet` on its metric / sensor / info modules: they still read and add the sample (graphs whole; InfoModule speeds come from the change since the last read) and return before drawing; tiles wait. Only the 1 s tick is held - `addSample` false always draws. `Quiet` / `AppWindows` are internal (not plugin API).
 - **Pollers**: Core clients poll fast only while a module shows them (`Latest` / `All()` marks "wanted"), slower for notifications.
 - **Terminal = vTerm** (0.38.194): the built-in terminal moved out into vTerm (https://github.com/version-au/vTerm, its CLAUDE.md has the terminal's
   history). vShell keeps only the bar's Terminal module (`TerminalModule`: button + keys) and `VTerm.cs`: `DropFor(bar, cfg, cmd)` works out

@@ -671,6 +671,9 @@ namespace vShell.Ui
         }
 
         /// <summary>Refresh the displayed values. addSample = false when only re-rendering (e.g. after a settings change).</summary>
+        /// <summary>Its widget is hidden: Update takes the sample (the graph stays whole) but draws nothing (WidgetWindow.UpdateStats).</summary>
+        internal bool Quiet;
+
         public void Update(SystemStats st, GpuStats gpu, bool addSample)
         {
             double v;
@@ -711,6 +714,7 @@ namespace vShell.Ui
                     }
             }
 
+            if (Quiet) { if (addSample) _hist.Add(v); return; }     // its widget is hidden: the sample only, nothing drawn (0.38.224)
             string temp = _cfg.ShowTemp ? TempText() : null;
 
             if (Gauge)

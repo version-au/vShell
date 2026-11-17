@@ -3425,3 +3425,18 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 6. Upgrade while one is running (here or on vPatch's Upgrade page): "vPatch couldn't start the upgrade: An upgrade of many hosts is running already."
 7. Palette: "Upgrade every host with updates (n)" (asks), "Upgrade <host>" (asks), "Open vPatch's Upgrade page".
 8. An older vPatch: "This vPatch is too old to upgrade from vShell - update it to 0.1.21 or newer".
+## 0.38.224 - hidden widgets rest; a locked widget says so
+1. A widget with CPU / memory / network / sensor modules (graphs on): cover it completely with a normal app window (Explorer, a
+   browser) - Task Manager shows vShell's CPU a little lower. Move the window away: within a second the widget shows current values,
+   and its graph has no gap for the time it was hidden (the samples were still taken). Never blank, never stuck.
+2. Only real app windows count (the ones on the taskbar), only those in front of the widget, and only when under 5 % of the widget
+   still shows: half covered, a minimised window, a window on another virtual desktop, a game / recorder overlay, a widget you're
+   typing in (it's in front), an always-on-top or peeking widget - all keep updating as before. Locked PC / full-screen / maximised
+   window: as before.
+3. Network speed (and plugins built on InfoModule, e.g. Downloads) stays right after being hidden - it keeps reading while hidden.
+4. Home Assistant tiles in a hidden widget wait, then show the current states when it shows again.
+5. Plugins that ask ModuleVisibility.Covered (Power flow, Fans, PeaNUT, the volume mixer's levels) now also rest when the widget /
+   bar is hidden behind app windows.
+6. Lock a widget (right-click > Lock position), press on an empty part of it and drag: an accent outline and "Locked · right-click to
+   unlock" at its bottom, the "no" cursor; fades after about a second. A plain click (no drag) on it, or on a module (a link, a
+   button), shows nothing. Unlocked widgets drag as before.

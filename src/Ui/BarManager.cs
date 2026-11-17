@@ -103,6 +103,13 @@ namespace vShell.Ui
 
             Tasks.Changed += OnTasksChanged;
             StartShellHook();
+            // "hidden behind app windows" counts only the windows the taskbar lists (ModuleVisibility, 0.38.224)
+            ModuleVisibility.AppWindows = delegate
+            {
+                var list = new List<IntPtr>();
+                foreach (TaskWindow w in Tasks.Windows) list.Add(w.Handle);
+                return list;
+            };
 
             // events drive the task list now; the poll is only a safety net
             _tasksTimer = MakeTimer(_hook != null ? 1500 : 400, delegate { Tasks.Refresh(); });

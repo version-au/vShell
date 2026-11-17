@@ -212,6 +212,12 @@ namespace vShell.Ui
             OnThemed(t);
         }
 
+        /// <summary>
+        /// Its widget is hidden: Update still reads (speeds come from the change since the last reading) and takes the sample, but
+        /// draws nothing (WidgetWindow.UpdateStats, 0.38.224). Internal - not part of the plugin API.
+        /// </summary>
+        internal bool Quiet;
+
         /// <summary>Refresh the text and graph. addSample = false when only re-rendering (e.g. after a settings change).</summary>
         public void Update(bool addSample)
         {
@@ -219,11 +225,12 @@ namespace vShell.Ui
             try { Read(r, addSample); }
             catch (Exception ex) { r.Text = "n/a"; r.Tip = ex.Message; }
 
-            Visibility = r.Hide ? Visibility.Collapsed : Visibility.Visible;
             // percent and amounts don't mix in one graph: switching starts it afresh
             bool auto = UsesGraph && r.AutoScale;
             if (_hist.Amounts != auto) { _hist.Clear(); _hist2.Clear(); _hist.Amounts = _hist2.Amounts = auto; }
             if (addSample && UsesGraph) { _hist.Add(r.Percent); if (r.Percent2 >= 0) _hist2.Add(r.Percent2); }
+            if (Quiet) return;
+            Visibility = r.Hide ? Visibility.Collapsed : Visibility.Visible;
             double scale = 0;
             if (auto)
             {

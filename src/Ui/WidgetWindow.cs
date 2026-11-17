@@ -64,6 +64,19 @@ namespace vShell.Ui
         {
             IsHitTestVisible = false, Visibility = Visibility.Collapsed, StrokeThickness = 2, StrokeDashArray = new DoubleCollection { 3, 2 }, Margin = new Thickness(2)
         };
+        // dragging a locked widget: an accent outline and "Locked · right-click to unlock" for a moment (0.38.224, after desk-widgets)
+        readonly System.Windows.Shapes.Rectangle _lockFlash = new System.Windows.Shapes.Rectangle
+        {
+            IsHitTestVisible = false, Visibility = Visibility.Collapsed, StrokeThickness = 2, Margin = new Thickness(1)
+        };
+        readonly Border _lockHint = new Border
+        {
+            IsHitTestVisible = false, Visibility = Visibility.Collapsed, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(6, 0, 6, 10), Padding = new Thickness(10, 3, 10, 4), CornerRadius = new CornerRadius(10)
+        };
+        readonly TextBlock _lockHintText = new TextBlock { Text = "Locked · right-click to unlock", TextTrimming = TextTrimming.CharacterEllipsis };
+        Point? _lockedPress;
+        int _lockFlashes;
         readonly List<MetricModule> _metricMods = new List<MetricModule>();
         readonly List<SensorModule> _sensorMods = new List<SensorModule>();
         readonly List<StartMenuModule> _startMods = new List<StartMenuModule>();
@@ -164,6 +177,9 @@ namespace vShell.Ui
             _stage.Children.Add(_shadowHost);        // drawn first (behind), clipped so it only shows OUTSIDE the box
             _stage.Children.Add(_ring);
             _stage.Children.Add(_pick);
+            _lockHint.Child = _lockHintText;
+            _stage.Children.Add(_lockFlash);
+            _stage.Children.Add(_lockHint);
             BuildResizeLayer();
             _stage.Children.Add(_resizeLayer);
             PreviewKeyDown += delegate (object s3, KeyEventArgs e3)
@@ -349,6 +365,14 @@ namespace vShell.Ui
             _ring.CornerRadius = new CornerRadius(cr > 0 ? cr + bw : 0);
             _pick.Stroke = t.MainAccent;
             _pick.RadiusX = _pick.RadiusY = Math.Max(0, cr - 1);
+            _lockFlash.Stroke = t.MainAccent;
+            _lockFlash.RadiusX = _lockFlash.RadiusY = Math.Max(0, cr);
+            _lockHint.Background = t.PopupBg;
+            _lockHint.BorderBrush = Theme.Faded(t.MainAccent, 60);
+            _lockHint.BorderThickness = new Thickness(1);
+            _lockHintText.Foreground = t.Fg;
+            _lockHintText.FontFamily = t.Font;
+            _lockHintText.FontSize = Math.Max(9, t.FontSize - 1);
             // fixed width / height = the box (the outline sits outside it); 0 = fit the modules
             _box.Width = Cfg.Width > 0 ? Math.Max(20, Cfg.Width) : double.NaN;
             _scroll.Resources["wThumb"] = Theme.Faded(t.FgDim, 70);
@@ -912,12 +936,21 @@ namespace vShell.Ui
             _shadowHost.Clip = clip;
         }
 
+        /// <summary>Nobody can see it right now (the last second's tick): its modules took their samples but didn't draw.</summary>
+        internal bool Unseen { get { return _unseen; } }
+        bool _unseen;
+
         public void UpdateStats(SystemStats st, bool addSample)
         {
-            foreach (var m in _metricMods) m.Update(st, Mgr.Gpu, addSample);
-            foreach (var m in _sensorMods) m.Update(addSample);
-            foreach (var m in _infoMods) m.Update(addSample);
-            foreach (var m in _tileMods) m.Update();
+            // hidden (the PC locked, a full-screen window, or app windows in front of all but a sliver of it - 0.38.224): the modules
+            // still take every sample, so graphs, averages and speeds stay whole, but nothing is drawn; the first tick it shows again
+            // draws everything as it is. Only the 1-second tick is held back - a settings change (addSample false) always draws.
+            bool quiet = addSample && !Dragging && !_resizing && (!IsVisible || _away || ModuleVisibility.Covered(this));
+            _unseen = quiet;
+            foreach (var m in _metricMods) { m.Quiet = quiet; try { m.Update(st, Mgr.Gpu, addSample); } finally { m.Quiet = false; } }
+            foreach (var m in _sensorMods) { m.Quiet = quiet; try { m.Update(addSample); } finally { m.Quiet = false; } }
+            foreach (var m in _infoMods) { m.Quiet = quiet; try { m.Update(addSample); } finally { m.Quiet = false; } }
+            if (!quiet) foreach (var m in _tileMods) m.Update();
         }
 
         // =================================================================
@@ -1050,10 +1083,34 @@ namespace vShell.Ui
         // =================================================================
         void Box_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.Handled || Cfg.Locked || e.ClickCount > 1) return;
+            _lockedPress = null;
+            if (e.Handled || e.ClickCount > 1) return;
             if (OnScrollBar(e.OriginalSource as DependencyObject)) return;      // a press on a scrollbar (its empty track too) never drags the widget
+            if (Cfg.Locked) { _lockedPress = e.GetPosition(this); return; }     // a drag starting here says it's locked (Box_MouseMove)
             BeginManualDrag();
             _box.CaptureMouse();
+        }
+
+        /// <summary>A locked widget being dragged: the outline and the hint for a moment, and the "no" cursor - it used to just not move.</summary>
+        void FlashLocked()
+        {
+            int mine = ++_lockFlashes;
+            var hold = TimeSpan.FromMilliseconds(900);
+            foreach (UIElement el in new UIElement[] { _lockFlash, _lockHint })
+            {
+                el.Visibility = Visibility.Visible;
+                var fade = new System.Windows.Media.Animation.DoubleAnimation(1, 0, new Duration(TimeSpan.FromMilliseconds(350))) { BeginTime = hold };
+                UIElement e2 = el;
+                fade.Completed += delegate
+                {
+                    if (mine != _lockFlashes) return;      // flashed again meanwhile: that one ends it
+                    e2.BeginAnimation(OpacityProperty, null);
+                    e2.Visibility = Visibility.Collapsed;
+                    _box.Cursor = null;
+                };
+                el.BeginAnimation(OpacityProperty, fade);
+            }
+            _box.Cursor = Cursors.No;
         }
 
         /// <summary>The press is on a scrollbar (a note's, a list's): it scrolls, it doesn't move the widget.</summary>
@@ -1070,10 +1127,21 @@ namespace vShell.Ui
         void Box_MouseMove(object sender, MouseEventArgs e)
         {
             if (Dragging && e.LeftButton == MouseButtonState.Pressed) UpdateManualDrag();
+            if (_lockedPress != null)
+            {
+                if (e.LeftButton != MouseButtonState.Pressed || !Cfg.Locked) { _lockedPress = null; return; }
+                Vector moved = e.GetPosition(this) - _lockedPress.Value;
+                if (Math.Abs(moved.X) > SystemParameters.MinimumHorizontalDragDistance * 2 || Math.Abs(moved.Y) > SystemParameters.MinimumVerticalDragDistance * 2)
+                {
+                    _lockedPress = null;      // once per press
+                    FlashLocked();
+                }
+            }
         }
 
         void Box_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            _lockedPress = null;
             if (!Dragging) return;
             _box.ReleaseMouseCapture();       // LostMouseCapture finishes the drag
         }
