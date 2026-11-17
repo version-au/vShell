@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.223
+## 0.38.223 · pre-release
 
 - vTrace plugin 2.1.2: notifications aren't skipped when many pile up while the PC sleeps or the server can't be reached, and they carry on after the server's Activity starts again.
 - vDeploy plugin 2.0.1 and vPatch plugin 1.0.1: the same - no notification is skipped when many are waiting or a request fails.
