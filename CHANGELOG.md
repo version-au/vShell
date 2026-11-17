@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.224
+## 0.38.224 · pre-release
 
 - A widget hidden behind your windows (or while the PC is locked) stops redrawing its graphs and readings until it shows again - its graphs keep every sample.
 - Dragging a locked widget shows that it's locked (an outline and "Locked · right-click to unlock") instead of just not moving.
