@@ -72,9 +72,9 @@ namespace VPatch
 
         string Sig(VpSnapshot s)
         {
-            var b = new StringBuilder(OnlyNeeding + "|" + GroupHosts + "|" + Count + "|" + ShowTotal + "|" + _cfg.Title + "|" + s.Ok + s.Checked + s.Error + s.Updates + "|" + s.Security);
+            var b = new StringBuilder(OnlyNeeding + "|" + GroupHosts + "|" + Count + "|" + ShowTotal + "|" + _cfg.Title + "|" + s.Ok + s.Checked + s.Error + s.Updates + "|" + s.Security + "|" + s.BatchRunning + s.BatchStopped + "|" + B.Get("UpgradeButton", true));
             foreach (VpHost h in s.Hosts)
-                b.Append('|').Append(h.Id).Append(h.Group).Append(h.Updates).Append(h.Security).Append(h.Restart).Append(h.Problem).Append(h.Checking).Append(h.Upgrading).Append(h.Checked);
+                b.Append('|').Append(h.Id).Append(h.Group).Append(h.Updates).Append(h.Security).Append(h.Restart).Append(h.Problem).Append(h.Checking).Append(h.Upgrading).Append(h.Checked).Append(h.JobState).Append(h.JobKind).Append(h.UpgradeFailed);
             return b.ToString();
         }
 
@@ -171,13 +171,27 @@ namespace VPatch
                 }
                 if (shown == 0) root.Children.Add(T(OnlyNeeding ? "Nothing needs you - " + Plugin.Summary(s) : "No hosts in vPatch yet", _t.FgDim, fs - 1));
                 if (left > 0) root.Children.Add(T("and " + left + " more", _t.FgDim, fs - 1.5));
+                if (s.BatchStopped.Length > 0 && !s.BatchRunning)
+                {
+                    var stop = T("The last upgrade stopped: " + s.BatchStopped, StatusColors.Warn, fs - 1.5);
+                    stop.TextWrapping = TextWrapping.Wrap;
+                    stop.Margin = new Thickness(0, 6, 0, 0);
+                    root.Children.Add(stop);
+                }
+                // the widget's own Upgrade button (the popup has its row of buttons below)
+                if (!popup && _host.IsWidget && B.Get("UpgradeButton", true) && (s.Waiting > 0 || s.BatchRunning))
+                {
+                    Border up = UpgradePill(s);
+                    up.HorizontalAlignment = HorizontalAlignment.Left;
+                    up.Margin = new Thickness(0, 8, 0, 0);
+                    root.Children.Add(up);
+                }
             }
             if (popup)
             {
                 var buttons = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
                 var list = new List<Border>();
-                if (s.Ok && s.Waiting > 0)
-                    list.Add(Pills.Make(_t, Plugin.Glyph, "Upgrade… (" + s.Waiting + ")", "vPatch's Upgrade page: the dry run of each, then group by group", true, delegate { Close(); Plugin.Open(Plugin.HomeUrl("/upgrade")); }, false));
+                if (s.Ok && (s.Waiting > 0 || s.BatchRunning)) list.Add(UpgradePill(s));
                 list.Add(Pills.Make(_t, "", _busy.Contains("*") ? "Checking…" : "Check now", "Ask every host what's waiting", false, delegate { CheckNow(null); }, false));
                 list.Add(Pills.Make(_t, "", "Open vPatch", "Open vPatch in your browser", false, delegate { Close(); Plugin.Open(Plugin.HomeUrl()); }, false));
                 foreach (Border b in list) { b.Margin = new Thickness(0, 0, 6, 6); buttons.Children.Add(b); }
@@ -191,6 +205,46 @@ namespace VPatch
                 return scroll;
             }
             return root;
+        }
+
+        /// <summary>
+        /// Upgrade (n): asks, then vPatch upgrades every host with updates - each one's dry run first, only the clean ones go (group by group;
+        /// one that would remove packages waits for an OK in vPatch). "Upgrading…" while it runs.
+        /// </summary>
+        Border UpgradePill(VpSnapshot s)
+        {
+            bool running = s.BatchRunning || _busy.Contains("upgrade");
+            return Pills.Make(_t, Plugin.Glyph, running ? "Upgrading…" : "Upgrade (" + s.Waiting + ")",
+                running ? "vPatch is upgrading - each host's dry run first" : "The dry run of each host first, then the clean ones are upgraded group by group",
+                !running, delegate { if (!running) UpgradeAll(s); }, false);
+        }
+
+        async void UpgradeAll(VpSnapshot s)
+        {
+            if (Questions.YesNo(null, Plugin.UpgradeQuestion(s, null), Plugin.Source) != MessageBoxResult.Yes) return;
+            _busy.Add("upgrade");
+            _shown = _popShown = "";
+            Refresh();
+            string err = await Plugin.UpgradeAsync(null);
+            await System.Threading.Tasks.Task.Delay(1500);     // till the next look shows it running
+            _busy.Remove("upgrade");
+            _shown = _popShown = "";
+            Refresh();
+            if (err != null) Questions.Tell(null, "vPatch couldn't start the upgrade: " + err, Plugin.Source);
+        }
+
+        async void UpgradeOne(VpHost h)
+        {
+            if (Questions.YesNo(null, Plugin.UpgradeQuestion(null, h), Plugin.Source) != MessageBoxResult.Yes) return;
+            _busy.Add(h.Id);
+            _shown = _popShown = "";
+            Refresh();
+            string err = await Plugin.UpgradeAsync(h.Id);
+            await System.Threading.Tasks.Task.Delay(1500);
+            _busy.Remove(h.Id);
+            _shown = _popShown = "";
+            Refresh();
+            if (err != null) Questions.Tell(null, "vPatch couldn't upgrade " + h.Name + ": " + err, Plugin.Source);
         }
 
         FrameworkElement Tile(string n, string label, Brush fg, double fs)
@@ -210,8 +264,10 @@ namespace VPatch
         {
             var line = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 2, 0, 2), Background = Brushes.Transparent };
             var right = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(8, 0, 0, 0) };
-            bool busy = _busy.Contains(h.Id) || h.Checking || h.Upgrading;
-            if (busy) right.Children.Add(T(h.Upgrading ? "upgrading…" : "checking…", _t.MainAccent, fs - 1.5));
+            bool busy = _busy.Contains(h.Id) || h.Checking || (h.Upgrading && !h.WaitingForOk);
+            if (busy) right.Children.Add(T(h.Upgrading ? h.JobText : _busy.Contains(h.Id) ? "asking…" : "checking…", _t.MainAccent, fs - 1.5));
+            else if (h.WaitingForOk) right.Children.Add(T("waiting for your OK", StatusColors.Warn, fs - 1.5));
+            else if (h.UpgradeFailed) right.Children.Add(T("upgrade didn't go", StatusColors.Bad, fs - 1.5));
             else if (!h.Checked) right.Children.Add(T("not checked", _t.FgDim, fs - 1.5));
             else if (h.Down) right.Children.Add(T("not answering", StatusColors.Bad, fs - 1.5));
             else
@@ -241,7 +297,9 @@ namespace VPatch
             var m = new ContextMenu();
             m.Items.Add(Item("Check " + h.Name + " now", delegate { CheckNow(h.Id); }, !h.Checking && !h.Upgrading));
             m.Items.Add(Item("Open in vPatch", delegate { Close(); Plugin.Open(Plugin.HostUrl(h)); }));
-            if (h.Updates > 0) m.Items.Add(Item("Upgrade… (in vPatch)", delegate { Close(); Plugin.Open(Plugin.HostUrl(h)); }, true, "Its page in vPatch: Upgrade… shows the dry run first"));
+            if (h.WaitingForOk) m.Items.Add(Item("Look at it in vPatch (it would remove packages)…", delegate { Close(); Plugin.Open(Plugin.HostUrl(h)); }, true, "Its dry run says what it would remove - OK it there"));
+            else if (h.Updates > 0) m.Items.Add(Item("Upgrade…", delegate { UpgradeOne(h); }, !h.Upgrading, "The dry run first - upgraded only if it's clean"));
+            if (h.Updates > 0) m.Items.Add(Item("See its dry run in vPatch…", delegate { Close(); Plugin.Open(Plugin.HostUrl(h)); }, true, "Its page in vPatch: Upgrade… there shows the dry run before anything changes"));
             m.Items.Add(new Separator());
             m.Items.Add(Item("Open shell on " + h.Name, delegate { Plugin.ShellOn(_mgr, h); }, h.Address.Length > 0, "SSH in vTerm"));
             return m;
@@ -301,7 +359,7 @@ namespace VPatch
                 p.Header("On the bar");
                 p.Check("⬆ 0 when everything is up to date", delegate { return b.Get("ShowTotal", true); }, delegate (bool v) { b.Set("ShowTotal", v); });
                 p.Title(cfg, "");
-                p.Note("⬆ updates waiting on all your hosts, then · security updates in the Secondary accent, the restart sign when a host needs one, ⚠ hosts not answering. The dot is green when all are up to date, amber with updates, red when a host isn't answering, the accent colour while checking or upgrading. Click it for the hosts by group: click one to open it in vPatch, right-click to check it now or open a shell; Upgrade… opens vPatch's Upgrade page.");
+                p.Note("⬆ updates waiting on all your hosts, then · security updates in the Secondary accent, the restart sign when a host needs one, ⚠ hosts not answering. The dot is green when all are up to date, amber with updates, red when a host isn't answering, the accent colour while checking or upgrading. Click it for the hosts by group: click one to open it in vPatch, right-click to check it now, upgrade it or open a shell. Upgrade asks, then vPatch runs each host's dry run and upgrades the clean ones group by group - one that would remove packages waits for your OK in vPatch.");
             }
             else
             {
@@ -311,7 +369,8 @@ namespace VPatch
                 p.Check("Grouped (in vPatch's upgrade order)", delegate { return b.Get("GroupHosts", true); }, delegate (bool v) { b.Set("GroupHosts", v); });
                 p.Check("Each host's system", delegate { return b.Get("ShowOs", true); }, delegate (bool v) { b.Set("ShowOs", v); });
                 p.Slider("How many", 1, 60, delegate { return b.Get("Count", 12.0); }, delegate (double v) { b.Set("Count", Math.Round(v)); });
-                p.Note("Click a host to open it in vPatch; right-click to check it now or open a shell in vTerm.");
+                p.Check("An Upgrade button when hosts have updates", delegate { return b.Get("UpgradeButton", true); }, delegate (bool v) { b.Set("UpgradeButton", v); });
+                p.Note("Click a host to open it in vPatch; right-click to check it now, upgrade it or open a shell in vTerm. Upgrade asks first, then vPatch runs each host's dry run and upgrades only the clean ones.");
             }
         }
     }

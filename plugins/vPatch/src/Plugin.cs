@@ -170,6 +170,27 @@ namespace VPatch
             return err;
         }
 
+        /// <summary>Upgrade one host, or every host with updates (null): the dry run first, then the upgrade if it's clean. null = started.</summary>
+        public static async Task<string> UpgradeAsync(string hostId)
+        {
+            if (_settings == null) return "Set up vPatch first";
+            string err = await VpClient.UpgradeAsync(VpSettings.Of(_settings), hostId);
+            _lastManual = DateTime.MinValue;
+            RefreshNow();
+            return err;
+        }
+
+        /// <summary>The question before an upgrade from vShell - what happens, in plain words.</summary>
+        public static string UpgradeQuestion(VpSnapshot s, VpHost h)
+        {
+            if (h != null)
+                return "Upgrade " + h.Name + " (" + h.Updates + (h.Updates == 1 ? " update" : " updates") + (h.Security > 0 ? ", " + h.Security + " security" : "") + ")?\n\n" +
+                       "vPatch runs the dry run first and upgrades only if it's clean. If it would remove packages, it waits for your OK on its page in vPatch.";
+            return "Upgrade " + s.Waiting + (s.Waiting == 1 ? " host" : " hosts") + " with updates?\n\n" +
+                   "vPatch goes group by group in its upgrade order. Each host gets its dry run first and is upgraded only if it's clean. " +
+                   "One that would remove packages waits for your OK in vPatch, and the first problem stops the hosts after it.";
+        }
+
         public static string HostUrl(VpHost h) { return HomeUrl("/hosts/" + Uri.EscapeDataString(h.Id)); }
         public static string HomeUrl(string path = "/") { return _settings == null ? "" : VpClient.BaseUrl(VpSettings.Of(_settings)) + path; }
         public static void Open(string url) { try { if (url.Length > 0) RunPanel.Open(url); } catch { } }
@@ -269,12 +290,20 @@ namespace VPatch
                 Run = async delegate (double n) { string err = await CheckAsync(null); return err == null ? PaletteCommand.Worked("vPatch is checking every host") : "vPatch: " + err; }
             });
             if (snap.Ok && snap.Waiting > 0)
+            {
                 into.Add(new PaletteCommand
                 {
-                    Title = "Upgrade hosts in vPatch…", Detail = snap.Waiting + (snap.Waiting == 1 ? " host has" : " hosts have") + " updates - opens vPatch's Upgrade page (the dry run first)", Glyph = Glyph, Source = Source,
-                    Words = "linux upgrade patch apt dnf", Boost = 1,
+                    Title = "Upgrade every host with updates (" + snap.Waiting + ")", Detail = "vPatch: the dry run of each first, then group by group - only the clean ones upgrade", Glyph = Glyph, Source = Source,
+                    Words = "linux upgrade patch apt dnf all", Boost = 1, Ask = true,
+                    Run = async delegate (double n) { string err = await UpgradeAsync(null); return err == null ? PaletteCommand.Worked("vPatch is upgrading - the dry run of each first") : "vPatch: " + err; }
+                });
+                into.Add(new PaletteCommand
+                {
+                    Title = "Open vPatch's Upgrade page", Detail = snap.Waiting + (snap.Waiting == 1 ? " host has" : " hosts have") + " updates - pick hosts, see each dry run", Glyph = Glyph, Source = Source,
+                    Words = "linux upgrade patch apt dnf dry run",
                     Run = delegate (double n) { Open(HomeUrl("/upgrade")); return Task.FromResult<string>(null); }
                 });
+            }
             if (!snap.Ok) return;
             foreach (VpHost h0 in snap.Hosts)
             {
@@ -284,6 +313,13 @@ namespace VPatch
                     Title = "Check " + h.Name + " for updates", Detail = Source + " · " + h.Group + " · " + h.StateText, Glyph = "", Source = Source, Words = h.Os + " linux updates",
                     Run = async delegate (double n) { string err = await CheckAsync(h.Id); return err == null ? PaletteCommand.Worked("vPatch is checking " + h.Name) : "vPatch: " + err; }
                 });
+                if (h.Updates > 0 && !h.Upgrading)
+                    into.Add(new PaletteCommand
+                    {
+                        Title = "Upgrade " + h.Name, Detail = Source + " · " + h.StateText + " · the dry run first, upgraded only if it's clean", Glyph = Glyph, Source = Source, Ask = true,
+                        Words = h.Os + " linux upgrade apt dnf", Boost = h.Security > 0 ? 1 : 0,
+                        Run = async delegate (double n) { string err = await UpgradeAsync(h.Id); return err == null ? PaletteCommand.Worked("vPatch is upgrading " + h.Name + " - its dry run first") : "vPatch: " + err; }
+                    });
             }
         }
 

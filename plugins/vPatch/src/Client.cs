@@ -21,8 +21,31 @@ namespace VPatch
         public bool Checked, Restart, Checking, Upgrading;
         public int Updates, Security;
         public DateTime CheckedUtc;
+        /// <summary>Its last upgrade / restart / repair (vPatch 0.1.21): JobState = dry-run, waiting, upgrading, after, done, failed, stopped …</summary>
+        public string JobKind = "", JobState = "", JobStep = "", JobProblem = "";
+        public DateTime JobEndedUtc;
 
         public bool Down { get { return Problem.Length > 0 && Updates == 0; } }
+        /// <summary>Its upgrade stopped before changing anything: it would remove packages - vPatch waits for an OK on its page.</summary>
+        public bool WaitingForOk { get { return JobKind == "upgrade" && JobState == "waiting"; } }
+        /// <summary>Its last upgrade failed (or was held back) and it hasn't been checked since - the reason shows until then.</summary>
+        public bool UpgradeFailed { get { return JobKind == "upgrade" && JobState is "failed" or "stopped" && (!Checked || CheckedUtc <= JobEndedUtc); } }
+        /// <summary>What its running upgrade is doing: "dry run…", "upgrading…", "checking again…".</summary>
+        public string JobText
+        {
+            get
+            {
+                switch (JobState)
+                {
+                    case "checking": case "dry-run": return "dry run…";
+                    case "upgrading": return "upgrading…";
+                    case "after": return "checking again…";
+                    case "restarting": return "restarting…";
+                    case "repairing": return "repairing…";
+                    default: return "upgrading…";
+                }
+            }
+        }
         public bool Proxmox { get { return Kind == "proxmox-ve" || Kind == "proxmox-backup"; } }
 
         /// <summary>"12 updates · 3 security", "up to date", "not answering", "not checked yet", "upgrading…".</summary>
@@ -30,7 +53,9 @@ namespace VPatch
         {
             get
             {
-                if (Upgrading) return "upgrading…";
+                if (Upgrading) return WaitingForOk ? "waiting for your OK in vPatch" : JobText;
+                if (WaitingForOk) return "waiting for your OK in vPatch - it would remove packages";
+                if (UpgradeFailed) return "upgrade didn't go: " + (JobProblem.Length > 0 ? JobProblem : JobStep);
                 if (Checking) return "checking…";
                 if (!Checked) return "not checked yet";
                 if (Down) return "not answering";
@@ -49,6 +74,9 @@ namespace VPatch
         public int Updates, Security;
         public long LastEvent;
         public DateTime AtUtc;
+        /// <summary>An upgrade of many hosts (vPatch's Upgrade page, or Upgrade from here): running, and why it stopped.</summary>
+        public bool BatchRunning;
+        public string BatchStopped = "";
 
         public int Waiting { get { return Hosts.Count(h => h.Updates > 0); } }
         public int Restarts { get { return Hosts.Count(h => h.Restart); } }
@@ -131,6 +159,11 @@ namespace VPatch
                 snap.Updates = (int)JsonValue.Num(r, "updates");
                 snap.Security = (int)JsonValue.Num(r, "security");
                 snap.LastEvent = (long)JsonValue.Num(r, "lastEvent");
+                if (r.TryGetProperty("batch", out JsonElement batch) && batch.ValueKind == JsonValueKind.Object)
+                {
+                    snap.BatchRunning = JsonValue.Bool(batch, "running", false);
+                    snap.BatchStopped = JsonValue.Str(batch, "stopped");
+                }
                 if (r.TryGetProperty("hosts", out JsonElement hosts) && hosts.ValueKind == JsonValueKind.Array)
                     foreach (JsonElement h in hosts.EnumerateArray())
                     {
@@ -141,6 +174,12 @@ namespace VPatch
                             Updates = (int)JsonValue.Num(h, "updates"), Security = (int)JsonValue.Num(h, "security"),
                             Restart = JsonValue.Bool(h, "restart", false), Checking = JsonValue.Bool(h, "checking", false), Upgrading = JsonValue.Bool(h, "upgrading", false),
                         };
+                        if (h.TryGetProperty("job", out JsonElement job) && job.ValueKind == JsonValueKind.Object)
+                        {
+                            x.JobKind = JsonValue.Str(job, "kind"); x.JobState = JsonValue.Str(job, "state"); x.JobStep = JsonValue.Str(job, "step"); x.JobProblem = JsonValue.Str(job, "problem");
+                            string ended = JsonValue.Str(job, "ended");
+                            if (ended.Length > 0 && DateTimeOffset.TryParse(ended, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset end)) x.JobEndedUtc = end.UtcDateTime;
+                        }
                         string at = JsonValue.Str(h, "checked");
                         if (at.Length > 0 && DateTimeOffset.TryParse(at, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset when)) { x.Checked = true; x.CheckedUtc = when.UtcDateTime; }
                         if (x.Group.Length == 0) x.Group = "Servers";
@@ -180,6 +219,21 @@ namespace VPatch
                 await Send(Req(HttpMethod.Post, c, hostId == null ? "/api/v1/check" : "/api/v1/hosts/" + Uri.EscapeDataString(hostId) + "/check"), CancellationToken.None).ConfigureAwait(false);
                 return null;
             }
+            catch (Exception ex) { return Plain(ex); }
+        }
+
+        /// <summary>
+        /// Upgrade one host (hostId), or every host with updates (null) as vPatch's Upgrade page does it - each gets a fresh dry run first and goes
+        /// ahead only when it's clean (vPatch 0.1.21). null = vPatch started it, else why not.
+        /// </summary>
+        public static async Task<string> UpgradeAsync(VpSettings c, string hostId)
+        {
+            try
+            {
+                await Send(Req(HttpMethod.Post, c, hostId == null ? "/api/v1/upgrade" : "/api/v1/hosts/" + Uri.EscapeDataString(hostId) + "/upgrade"), CancellationToken.None).ConfigureAwait(false);
+                return null;
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("page, not")) { return "This vPatch is too old to upgrade from vShell - update it to 0.1.21 or newer"; }
             catch (Exception ex) { return Plain(ex); }
         }
 

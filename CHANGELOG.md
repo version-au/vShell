@@ -13,6 +13,7 @@ Newest first. The heading must start with `## ` and the version number exactly a
 - The Start menu no longer builds its list again every time the Store apps are looked up and nothing changed; they are looked up every half hour, not every 10 minutes.
 - Fans plugin 1.0.11: reads its lists from the settings only when they change, not every second.
 - Glass (Blur / Frosted): a wallpaper on a network share that has gone away no longer holds the bars and windows for seconds at a time (vSuite.Core 1.0.41).
+- vPatch plugin 1.1.0: Upgrade in the popup and widget (and a host's right-click menu) runs vPatch's dry run first, then upgrades only the hosts that are clean (needs vPatch 0.1.21).
 
 ## 0.38.222 · pre-release
 

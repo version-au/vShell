@@ -3412,3 +3412,16 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 2. Start menu / run box: open them, wait over half an hour, open again: the list is the same and doesn't flicker; install or remove a Store app: it appears / goes within half an hour of the next opening (a Start Menu shortcut: at once, as before).
 3. Fans module / widget: readings, names, order, hidden fans and warnings exactly as before; rename a fan, reorder, hide one in Settings > Plugins > Fans: the module follows at once.
 4. Glass: Blur or Frosted with the wallpaper on a network share, then take the share away (unplug / block it): bars and Settings keep moving smoothly (they stood still for seconds every 4 s); when it is back the glass follows the wallpaper again. A local wallpaper: unchanged, and a new wallpaper is followed as quickly as before.
+
+## 0.38.223 - vPatch plugin 1.1.0: upgrade from vShell (needs vPatch 0.1.21)
+1. Popup with hosts that have updates: "Upgrade (n)" -> asks ("vPatch goes group by group… each host gets its dry run first and is
+   upgraded only if it's clean…") -> Yes: "Upgrading…" (greyed) while vPatch's batch runs; each host shows "dry run…", "upgrading…",
+   "checking again…", then up to date. No: nothing happens.
+2. Widget: the same Upgrade (n) button under the list (setting "An Upgrade button when hosts have updates", on).
+3. Right-click a host with updates: Upgrade… (asks, then only that host - the dry run first), See its dry run in vPatch….
+4. A host whose dry run would remove packages: "waiting for your OK" (amber), right-click "Look at it in vPatch (it would remove packages)…";
+   a batch stops there - under the list "The last upgrade stopped: …".
+5. A host whose dry run was held back / failed: "upgrade didn't go" (red; hover says why) until it's checked again.
+6. Upgrade while one is running (here or on vPatch's Upgrade page): "vPatch couldn't start the upgrade: An upgrade of many hosts is running already."
+7. Palette: "Upgrade every host with updates (n)" (asks), "Upgrade <host>" (asks), "Open vPatch's Upgrade page".
+8. An older vPatch: "This vPatch is too old to upgrade from vShell - update it to 0.1.21 or newer".
