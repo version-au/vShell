@@ -567,7 +567,9 @@ namespace VShellFans
                 box.Children.Add(icon);
                 return box;
             }
-            double pct = v.GraphHeight > 0 ? v.GraphHeight : style == "Meter" ? 22 : defPct;
+            // automatic: the layout's own height; Dots at least 60 % - vShell's own Dots graph (4 rows, the same size dots as the CPU module
+            // beside it; at 45 % they came out smaller and more of them - 1.2.3)
+            double pct = v.GraphHeight > 0 ? v.GraphHeight : style == "Meter" ? 22 : style == "Dots" ? Math.Max(defPct, 60) : defPct;
             g.GraphH = Math.Max(3, Math.Round(rowH * pct / 100.0));
             if (v.GraphLen > 0) { g.GraphW = v.GraphLen; g.HorizontalAlignment = HorizontalAlignment.Left; }
             else { g.GraphW = defLen; g.HorizontalAlignment = stretch ? HorizontalAlignment.Stretch : HorizontalAlignment.Left; }

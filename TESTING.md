@@ -3508,3 +3508,6 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 ## 0.38.234 - Fans 1.2.2: Under the graph the same size as CPU's
 1. One bar with a CPU module (Dots, Details in a bar = Under the graph) and a Fans module (Dots, Speed = Under the graph, Graph height automatic): the dots the same size and the graphs the same height; the text under them the same size. Try a 28 and a 40 px bar.
 2. Fans Under the label: the speed's text the same size as the CPU module's Under the label.
+## 0.38.235 - Fans 1.2.3: automatic Dots height as CPU's
+1. A bar with a CPU module (Dots, Graph height automatic) and a Fans module (Dots, Graph height 0 = automatic, Speed after the graph): both 4 rows of the same size dots. Every fan side by side and one fan the same. Line / Bars keep their 45 %; Meter its thin bar.
+2. Fans, Graph height set (e.g. 80 %): more rows of the same size dots, as before.
