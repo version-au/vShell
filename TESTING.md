@@ -3454,3 +3454,9 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 ## 0.38.227 - the Dots tile's width in a widget
 1. A widget that sizes itself to its content, its CPU module set to Dots: the tile is about Graph length wide (at least 136 px), not stretched across the screen. Move the Graph length slider: the tile gets wider / narrower.
 2. A widget with a fixed width wider than that: the tile still fills it.
+3. Style = Dots on Memory (detail: 9.9 of 16 GB) and GPU (VRAM with More detail): as the CPU's, in a bar and a widget.
+4. Network, Dots: download dots rise above a middle line, upload hangs below it (newest column in the graph / upload colours); the number in dots, MB/s (or Mbit/s) in the font; in a widget the upload speed top right. In a bar the graph is 6 dots tall (3 each side) - raise Graph height if the dots are too small. Automatic scale on and off.
+5. Disk, Show = Space, Dots: the dots fill up from the left as the drive does (4 rows in a tile), the last one in the graph colour; Show = Activity: a history like CPU's.
+6. Battery (a laptop), Dots: BAT, the percentage, and in a tile charging / on battery and the time left.
+7. HWiNFO sensor, Dots: the title as the label, the number in dots with its unit (°C in dots, RPM / W / MHz in the font), the graph over the graph range; the warning level in the sensor's unit.
+8. Downloads plugin (not rebuilt), Dots: works in a bar, and in a widget it's a tile like the others. Volume has no Dots (Text / Meter only).

@@ -149,8 +149,11 @@ namespace vShell.Core
         /// <summary>Tray icons: their own colours, or tinted towards a theme colour.</summary>
         public static readonly string[] TrayIconColours = { "Original", "Tint" };
         public static readonly string[] TrayTintColours = { "Text", "Main Accent", "Secondary Accent" };
-        /// <summary>The gauge modules (CPU, memory, GPU, disk, HWiNFO) also offer a round "Ring" and a "Tile" (label, big number, sparkline).</summary>
-        public static readonly string[] GaugeStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile" };
+        /// <summary>The gauge modules (CPU, memory, GPU, disk, HWiNFO) also offer a round "Ring", a "Tile" (label, big number, sparkline) and
+        /// "Dots" (dot graph and dot numbers - 0.38.227).</summary>
+        public static readonly string[] GaugeStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile", "Dots" };
+        /// <summary>Battery: the plain graphs and Dots.</summary>
+        public static readonly string[] BatteryStyles = { "Text", "Meter", "Bars", "Line", "Dots" };
         public static bool HasGauges(string type) { return type == Cpu || type == Memory || type == Gpu || type == Disk || type == Hwinfo || type == Downloads || type == Network; }
         public static readonly string[] TaskAnims = { "Off", "Slide", "Stretch", "Fade", "Shrink and grow", "Hop", "Liquid" };
         public static readonly string[] TaskAttentions = { "Pulse", "Steady" };
@@ -181,7 +184,7 @@ namespace vShell.Core
         public static readonly List<string> ExtraSources = new List<string>();
         /// <summary>CPU also has "Cores" (a small bar per thread - logical processor) and "Dots" (dot graph and dot numbers - 0.38.226, CPU first).</summary>
         public static readonly string[] CpuStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile", "Cores", "Dots" };
-        public static string[] StylesFor(string type) { return type == Cpu ? CpuStyles : HasGauges(type) ? GaugeStyles : GraphStyles; }
+        public static string[] StylesFor(string type) { return type == Cpu ? CpuStyles : HasGauges(type) ? GaugeStyles : type == Battery ? BatteryStyles : GraphStyles; }
 
         /// <summary>
         /// Change a module's graph style, keeping each style's own graph width / height: the current size is remembered for the old style and

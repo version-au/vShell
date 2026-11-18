@@ -58,8 +58,16 @@ namespace vShell.Ui
         readonly Grid _rowHost;
         readonly Border _level;
         GaugeFace _gauge;
+        DotFace _dots;
         string _shownKey;
         bool _down;
+
+        /// <summary>Offers the "Dots" style (0.38.227: the gauge modules - disk, network, a plugin's built on this - and battery).</summary>
+        private protected virtual bool HasDots { get { return HasGauges; } }
+        /// <summary>The "Dots" style is shown.</summary>
+        bool Dotted { get { return UsesGraph && HasDots && GraphStyle == "Dots"; } }
+        /// <summary>Dots as a tile: in a widget, for a module that can be taller than one row (it is IMultiRow and asks for 0 rows then).</summary>
+        private protected bool DotTile { get { return Dotted && Bar.IsWidget && this is IMultiRow; } }
 
         /// <summary>Offers the Ring and Tile styles (disk).</summary>
         protected virtual bool HasGauges { get { return false; } }
@@ -67,7 +75,7 @@ namespace vShell.Ui
         protected virtual bool TileMeter { get { return false; } }
         bool Gauge { get { return HasGauges && UsesGraph && GaugeFace.IsGauge(GraphStyle); } }
         /// <summary>A tile in a widget is taller than one row (subclasses that are IMultiRow use this).</summary>
-        protected bool TallTile { get { return Gauge && GraphStyle == "Tile"; } }
+        protected bool TallTile { get { return (Gauge && GraphStyle == "Tile") || DotTile; } }     // a Dots tile too (0.38.227 - a plugin's module that uses this gets it)
 
         /// <summary>Offers Style / graph settings.</summary>
         protected virtual bool UsesGraph { get { return false; } }
@@ -184,6 +192,15 @@ namespace vShell.Ui
                 OnThemed(t);
                 return;
             }
+            if (Dotted)
+            {
+                if (_dots == null) _dots = new DotFace(_hist, _hist2);
+                _dots.Setup(Cfg, Bar, t, DotTile, double.NaN, TileMeter);
+                Child = _dots;
+                _shownKey = null;
+                OnThemed(t);
+                return;
+            }
             Child = _rowHost;
             _level.Background = Theme.Faded(t.Fg, 75);
             bool graph = UsesGraph && GraphStyle != "Text";
@@ -235,7 +252,7 @@ namespace vShell.Ui
             if (auto)
             {
                 // as many samples as the graph shows (bars: one per 3 px, 5 with two series, a few seconds each for longer times; a line or a tile: its time shown)
-                int shown = MetricView.SamplesShown(Gauge ? "Line" : GraphStyle, Cfg.ShownGraphWidth, r.Percent2 >= 0, Math.Max(60, Cfg.GraphSpan));
+                int shown = MetricView.SamplesShown(Gauge || Dotted ? "Line" : GraphStyle, Cfg.ShownGraphWidth, r.Percent2 >= 0, Math.Max(60, Cfg.GraphSpan));
                 scale = Math.Max(MetricView.ScaleFor(_hist, _hist2, r.ScaleMin, shown), MetricView.ScaleFor(null, null, Math.Max(r.Percent, r.Percent2)));
             }
             GraphScale = scale;
@@ -245,6 +262,14 @@ namespace vShell.Ui
                 string num = string.IsNullOrEmpty(r.Number) ? r.Percent.ToString("0", CultureInfo.CurrentCulture) : r.Number;
                 _gauge.FullScale = scale;
                 _gauge.Show(string.IsNullOrEmpty(r.Label) ? r.Text : r.Label, num, r.Unit, r.Detail, r.Percent, warn, null, r.Percent2);
+                ToolTip = string.IsNullOrEmpty(r.Tip) ? null : r.Tip;
+                return;
+            }
+            if (Dotted && _dots != null)
+            {
+                string num = string.IsNullOrEmpty(r.Number) ? r.Percent.ToString("0", CultureInfo.CurrentCulture) : r.Number;
+                _dots.FullScale = scale;
+                _dots.Show(string.IsNullOrEmpty(r.Label) ? r.Text : r.Label, num, r.Unit, r.Detail, warn, r.Percent, r.Percent2);
                 ToolTip = string.IsNullOrEmpty(r.Tip) ? null : r.Tip;
                 return;
             }
@@ -309,8 +334,10 @@ namespace vShell.Ui
     // =====================================================================
     // Network
     // =====================================================================
-    public sealed class NetworkModule : InfoModule
+    public sealed class NetworkModule : InfoModule, IMultiRow
     {
+        /// <summary>A Dots tile in a widget sizes itself (taller than a row); otherwise one row, as before.</summary>
+        public int RowCount { get { return DotTile ? 0 : 1; } }
         // one sampler per adapter, shared by every network module watching it ("" = the adapters with a gateway)
         NetworkSampler _net { get { return NetworkSampler.For(Cfg.NetInterface); } }
 
@@ -436,7 +463,7 @@ namespace vShell.Ui
     {
         protected override bool HasGauges { get { return true; } }
         protected override bool TileMeter { get { return Cfg.DiskMode != "Activity"; } }
-        public int RowCount { get { return TallTile ? 0 : 1; } }
+        public int RowCount { get { return TallTile || DotTile ? 0 : 1; } }
         long _total, _free;
         DateTime _spaceAt = DateTime.MinValue;
         bool _spaceBusy, _spaceOk;
@@ -508,9 +535,12 @@ namespace vShell.Ui
     // =====================================================================
     // Battery
     // =====================================================================
-    public sealed class BatteryModule : InfoModule
+    public sealed class BatteryModule : InfoModule, IMultiRow
     {
         protected override bool UsesGraph { get { return true; } }
+        private protected override bool HasDots { get { return true; } }
+        /// <summary>A Dots tile in a widget sizes itself (taller than a row); otherwise one row, as before.</summary>
+        public int RowCount { get { return DotTile ? 0 : 1; } }
 
         public BatteryModule(BarManager mgr, IModuleHost bar, ModuleConfig cfg) : base(mgr, bar, cfg) { }
 
@@ -526,6 +556,11 @@ namespace vShell.Ui
             }
             r.Percent = Math.Max(0, b.Percent);
             string state = b.Charging ? "charging" : (b.OnAc ? "plugged in" : "on battery");
+            // Dots: "BAT", the percentage, and how it's doing (time left on battery)
+            r.Label = Prefix("BAT").Trim();
+            r.Number = b.Percent >= 0 ? b.Percent.ToString(CultureInfo.CurrentCulture) : "?";
+            r.Unit = b.Percent >= 0 ? "%" : "";
+            r.Detail = state + (!b.OnAc && b.SecondsLeft > 0 ? " · " + Duration(TimeSpan.FromSeconds(b.SecondsLeft)) + " left" : "");
             r.Text = Prefix("BAT") + (b.Percent >= 0 ? b.Percent + "%" : "?") + (b.Charging ? " +" : "");
             r.Tip = (b.Percent >= 0 ? b.Percent + "%, " : "") + state +
                     (!b.OnAc && b.SecondsLeft > 0 ? "\n" + Duration(TimeSpan.FromSeconds(b.SecondsLeft)) + " remaining" : "");

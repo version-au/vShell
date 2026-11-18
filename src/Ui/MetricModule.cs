@@ -559,7 +559,7 @@ namespace vShell.Ui
 
         /// <summary>A tile in a widget is taller than one row: it sizes itself (so does Dots in a widget).</summary>
         public int RowCount { get { return _cfg.Style == "Tile" || (Dotted && _bar.IsWidget) ? 0 : 1; } }
-        /// <summary>The "Dots" style (CPU only for now).</summary>
+        /// <summary>The "Dots" style (CPU, memory, GPU).</summary>
         bool Dotted { get { return _cfg.Style == "Dots"; } }
         bool Gauge { get { return GaugeFace.IsGauge(_cfg.Style); } }
 
@@ -602,7 +602,7 @@ namespace vShell.Ui
             if (Dotted)
             {
                 if (_dots == null) _dots = new DotFace(_hist);
-                _dots.Setup(_cfg, _bar, t);
+                _dots.Setup(_cfg, _bar, t, _bar.IsWidget);
                 Child = _dots;
                 _shownKey = null;
                 return;
@@ -746,10 +746,13 @@ namespace vShell.Ui
             {
                 if (addSample) _hist.Add(v);
                 bool na = txt.EndsWith("n/a");
-                string detail = txt.Contains(" · ") ? txt.Substring(txt.IndexOf(" · ") + 3) : null;     // the clock speed
+                string detail = null;
+                if (_cfg.Type == ModuleTypes.Memory) detail = string.Format("{0:0.0} of {1:0} GB", st.MemUsedGb, st.MemTotalGb);
+                else if (_cfg.Type == ModuleTypes.Gpu && txt.Contains(" - ")) detail = txt.Substring(txt.IndexOf(" - ") + 3);     // VRAM (More detail)
+                else if (txt.Contains(" · ")) detail = txt.Substring(txt.IndexOf(" · ") + 3);                                     // the clock speed
                 if (temp != null) detail = detail == null ? temp : detail + " · " + temp;
                 _dots.Show(_cfg.Type == ModuleTypes.Memory ? "RAM" : _cfg.Type == ModuleTypes.Gpu ? "GPU" : "CPU", na ? "n/a" : v.ToString("0"), na ? "" : "%", detail,
-                           Theme.Crossed(v, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow));
+                           Theme.Crossed(v, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow), v);
                 ToolTip = txt + (temp != null ? "  " + temp : "");
                 return;
             }

@@ -8,46 +8,57 @@ using vShell.Core;
 namespace vShell.Ui
 {
     /// <summary>
-    /// The "Dots" style (CPU, 0.38.226): the readings as columns of dots on a dim dot field, the newest column in the graph colour, the
-    /// number drawn in 5 x 7 dots (or in the theme's font - "Numbers in dots" off) and a small grey upper-case label.
-    /// In a bar: label, dot graph and number in one row. In a widget: a tile - label (and the detail on the right), the big number, and
-    /// the dot graph filling the rest of the module, as tall as the widget lets it be.
+    /// The "Dots" style (CPU 0.38.226; memory, GPU, disk, network, battery, HWiNFO sensors 0.38.227): the readings as columns of dots on a
+    /// dim dot field, the newest column in the graph colour, the number drawn in 5 x 7 dots (or in the theme's font - "Numbers in dots"
+    /// off) and a small grey upper-case label. Two series (network) mirror round a middle line: download up, upload (its own colour)
+    /// down. A meter (disk space) fills the field from the left instead of keeping a history.
+    /// In a bar: label, dot graph and number in one row. As a tile (a widget, for modules that can be taller than a row): label (and
+    /// the detail on the right), the big number, and the dot graph filling the rest of the module.
     /// </summary>
     internal sealed class DotFace : FrameworkElement
     {
-        readonly History _data;
+        readonly History _data, _data2;
         Theme _t;
         IModuleHost _host;
-        Brush _accent, _warnFill, _on, _off;
+        Brush _accent, _accent2, _warnFill, _on, _on2, _off;
         Color[] _load;
-        bool _widget, _dotNumbers = true, _showLabel = true;
+        bool _tile, _meter, _dotNumbers = true, _showLabel = true;
         double _graphW = 60, _heightPercent = 60;
         int _span = 60;
         double _warnAt = -1;
         bool _warnBelow;
+        double _fullScale;
+        double _keepNumW;
 
         string _label = "", _number = "", _unit = "", _detail;
+        double _percent, _percent2 = -1;
         bool _warn;
 
-        public DotFace(History data) { _data = data; }
+        public DotFace(History data, History data2 = null) { _data = data; _data2 = data2; }
 
-        /// <summary>The look: from the module's settings and theme (again whenever they change).</summary>
-        public void Setup(ModuleConfig cfg, IModuleHost host, Theme t)
+        /// <summary>
+        /// The look, from the module's settings and theme (again whenever they change). tile = the widget layout (only for modules that can
+        /// be taller than one row); warnPercent = the warning level in graph percent (NaN = the module's WarnAt as a percent);
+        /// meter = fill the field with the value now instead of a history (disk space).
+        /// </summary>
+        public void Setup(ModuleConfig cfg, IModuleHost host, Theme t, bool tile, double warnPercent = double.NaN, bool meter = false)
         {
-            _t = t; _host = host;
-            _widget = host.IsWidget;
+            _t = t; _host = host; _tile = tile; _meter = meter;
             _accent = t.Resolve(cfg.Color, t.MainAccent);
+            _accent2 = t.Resolve(cfg.Color2, t.SecondaryAccent);
             _warnFill = t.Warn(cfg.WarnColor);
-            _warnAt = cfg.WarnOn ? Math.Max(0, Math.Min(100, cfg.WarnAt)) : -1;
+            _warnAt = double.IsNaN(warnPercent) ? (cfg.WarnOn ? Math.Max(0, Math.Min(100, cfg.WarnAt)) : -1) : warnPercent;
             _warnBelow = cfg.WarnBelow;
             _on = t.Fg;
             Color fg = t.Fg.Color;
             _off = Frozen(Color.FromArgb(38, fg.R, fg.G, fg.B));
+            _on2 = t.FgDim;
             _dotNumbers = cfg.Bag.Get("dots.numbers", true);
             _showLabel = cfg.ShowText;
             _graphW = Math.Max(20, cfg.ShownGraphWidth);
             _heightPercent = Math.Max(20, Math.Min(100, cfg.GraphHeightPercent));
             _span = Math.Max(60, Math.Min(History.Capacity, cfg.GraphSpan));
+            _keepNumW = 0;
             if (cfg.LoadColors && ModuleTypes.HasLoadColors(cfg.Type))
             {
                 Color main = t.MainAccent.Color;
@@ -59,54 +70,64 @@ namespace vShell.Ui
                 };
             }
             else _load = null;
-            HorizontalAlignment = _widget ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
-            VerticalAlignment = _widget ? VerticalAlignment.Stretch : VerticalAlignment.Center;
+            HorizontalAlignment = _tile ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
+            VerticalAlignment = _tile ? VerticalAlignment.Stretch : VerticalAlignment.Center;
             InvalidateMeasure();
             InvalidateVisual();
         }
 
-        /// <summary>What it shows now: the label ("CPU"), the number ("37") and unit ("%"), an optional detail ("4.2 GHz"), warned or not.</summary>
-        public void Show(string label, string number, string unit, string detail, bool warn)
+        /// <summary>Above 0: the samples are amounts (MB/s …) and this fills the graph (MetricView.ScaleFor); 0 = they are percent.</summary>
+        public double FullScale { set { _fullScale = value; } }
+
+        /// <summary>
+        /// What it shows now: the label ("CPU"), the number ("37") and unit ("%"), an optional detail ("4.2 GHz"), warned or not, and the
+        /// value(s) now in graph percent (a meter fills with percent; percent2 = the second series, below 0 = none).
+        /// </summary>
+        public void Show(string label, string number, string unit, string detail, bool warn, double percent = 0, double percent2 = -1)
         {
-            bool resize = (number ?? "").Length != _number.Length || (detail ?? "") != (_detail ?? "") || label != _label;
+            bool resize = (number ?? "").Length != _number.Length || (unit ?? "") != _unit || (detail ?? "") != (_detail ?? "") || label != _label ||
+                          (percent2 >= 0) != (_percent2 >= 0);     // a second series makes the bar's graph taller
             _label = label ?? ""; _number = number ?? ""; _unit = unit ?? ""; _detail = detail; _warn = warn;
-            if (resize && !_widget) InvalidateMeasure();
+            _percent = percent; _percent2 = percent2;
+            if (resize && !_tile) InvalidateMeasure();
             InvalidateVisual();
         }
+
+        bool Two { get { return !_meter && _data2 != null && _data2.Count > 0 && _percent2 >= 0; } }
 
         // ---- sizes (all from the theme's font size, so a bigger font makes bigger dots) ----
 
         double Fs { get { return _t != null ? _t.FontSize : 12; } }
         double HostH { get { return _host != null ? Math.Max(16, _host.HostHeight) : 24; } }
-        /// <summary>The number's dot pitch: in a bar about the height of the text; in a widget about 2.2 x the font size tall.</summary>
-        double NumCell { get { return _widget ? Math.Max(2, Math.Round(Fs * 0.32 * 2) / 2) : Math.Max(1.4, Math.Min(Fs * 0.16, (HostH - 6) / 7.0)); } }
-        double LabelSize { get { return _widget ? Math.Max(7, Fs * 0.8) : Math.Max(7, Math.Min(Fs * 0.72, HostH * 0.36)); } }
-        /// <summary>The bar's graph: 4 dots tall, filling the graph height.</summary>
-        double BarCell { get { return Math.Max(2, HostH * _heightPercent / 100.0 / 4.0); } }
-        double WidgetCell { get { return Math.Max(4, Math.Round(Fs * 0.6 * 2) / 2); } }
+        /// <summary>The number's dot pitch: in a bar about the height of the text; in a tile about 2.2 x the font size tall.</summary>
+        double NumCell { get { return _tile ? Math.Max(2, Math.Round(Fs * 0.32 * 2) / 2) : Math.Max(1.4, Math.Min(Fs * 0.16, (HostH - 6) / 7.0)); } }
+        double LabelSize { get { return _tile ? Math.Max(7, Fs * 0.8) : Math.Max(7, Math.Min(Fs * 0.72, HostH * 0.36)); } }
+        /// <summary>The bar's graph rows: 4 (6 with two series, 3 each side of the middle), filling the graph height.</summary>
+        int BarRows { get { return Two ? 6 : 4; } }
+        double BarCell { get { return Math.Max(2, HostH * _heightPercent / 100.0 / BarRows); } }
+        double TileCell { get { return Math.Max(4, Math.Round(Fs * 0.6 * 2) / 2); } }
         const double Pad = 8;
 
         protected override Size MeasureOverride(Size available)
         {
             if (_t == null) return new Size(0, 0);
-            if (_widget)
+            if (_tile)
             {
-                // label line, the number, then at least 4 rows of dots; as tall as the module row asks for at least
-                double h = Pad + LabelSize * 1.4 + 6 + NumCell * 7 + 8 + WidgetCell * 4 + Pad;
-                // as wide as Graph length asks (never what the widget offers: a widget that sizes itself to its content offers its
-                // whole room, and the tile took all of it - 0.38.226); a wider widget still stretches it (HorizontalAlignment)
+                // label line, the number, then at least 4 rows of dots; as tall as the module row asks for at least. As wide as Graph length
+                // asks - never what the widget offers (a widget that sizes itself to its content offers its whole room); a wider widget
+                // still stretches it (HorizontalAlignment)
+                double h = Pad + LabelSize * 1.4 + 6 + NumCell * 7 + 8 + TileCell * 4 + Pad;
                 double w = Math.Max(_graphW, 120) + Pad * 2;
                 if (!double.IsInfinity(available.Width)) w = Math.Min(w, available.Width);
                 return new Size(w, Math.Max(h, HostH));
             }
             double width = 0;
-            if (_showLabel) width += Spaced(_label, LabelSize).Width + 8;
-            width += Columns(_graphW, BarCell) * BarCell + 8 + NumberWidth(NumberSample());
-            return new Size(Math.Ceiling(width) + 2, Math.Max(BarCell * 4, NumCell * 7));
+            if (_showLabel && _label.Length > 0) width += Spaced(_label, LabelSize).Width + 8;
+            // the number's room never shrinks while the look stays the same, so the module doesn't jiggle as the number changes
+            _keepNumW = Math.Max(_keepNumW, Math.Max(NumberWidth(_number), NumberWidth(_number.Length >= 3 ? new string('8', _number.Length) : "100")));
+            width += Columns(_graphW, BarCell) * BarCell + 8 + _keepNumW;
+            return new Size(Math.Ceiling(width) + 2, Math.Max(BarCell * BarRows, NumCell * 7));
         }
-
-        /// <summary>Room for "100%" (or the number shown, if longer), so the module doesn't jiggle as the number changes.</summary>
-        string NumberSample() { return _number.Length > 3 ? new string('8', _number.Length) : "100"; }
 
         static int Columns(double width, double cell) { return Math.Max(4, (int)Math.Floor(width / cell)); }
 
@@ -116,7 +137,7 @@ namespace vShell.Ui
             double w = ActualWidth, h = ActualHeight;
             if (w < 4 || h < 4) return;
             dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, w, h));      // the whole module takes clicks / the tooltip
-            if (_widget) RenderTile(dc, w, h); else RenderRow(dc, w, h);
+            if (_tile) RenderTile(dc, w, h); else RenderRow(dc, w, h);
         }
 
         void RenderRow(DrawingContext dc, double w, double h)
@@ -129,11 +150,11 @@ namespace vShell.Ui
                 x += lab.Width + 8;
             }
             double cell = BarCell;
-            int cols = Columns(_graphW, cell);
-            DrawField(dc, x, (h - cell * 4) / 2, cols, 4, cell);
+            int cols = Columns(_graphW, cell), rows = BarRows;
+            DrawField(dc, x, (h - cell * rows) / 2, cols, rows, cell);
             x += cols * cell + 8;
             double nc = NumCell;
-            DrawNumber(dc, x, (h - nc * 7) / 2, nc, false);
+            DrawNumber(dc, x, (h - nc * 7) / 2, nc);
         }
 
         void RenderTile(DrawingContext dc, double w, double h)
@@ -155,36 +176,82 @@ namespace vShell.Ui
                         dc.DrawText(det, new Point(w - Pad - Math.Min(room, det.WidthIncludingTrailingWhitespace), y));
                     }
                 }
-                y += lab.Height + 6;
+                y += Math.Max(lab.Height, LabelSize * 1.2) + 6;
             }
             double nc = NumCell;
-            DrawNumber(dc, Pad, y, nc, true);
+            DrawNumber(dc, Pad, y, nc);
             y += nc * 7 + 8;
-            // the graph fills the rest: as many rows as fit (at least 3), as many columns as the width takes
-            double cell = WidgetCell;
+            // the graph fills the rest: as many rows as fit (at least 3; an even number for two series), as many columns as the width takes
+            double cell = TileCell;
             int rows = Math.Max(3, Math.Min(12, (int)Math.Floor((h - Pad - y) / cell)));
+            if (Two) rows = Math.Max(4, rows - rows % 2);
+            if (_meter) rows = Math.Min(rows, 4);     // a fill reads best as a band, not a block (the mock-up's 20 x 4)
             int cols = Columns(w - Pad * 2, cell);
             double left = Pad + ((w - Pad * 2) - cols * cell) / 2;
             DrawField(dc, left, h - Pad - rows * cell, cols, rows, cell);
         }
 
-        /// <summary>The dot graph: one column per bar of history (newest on the right, in the graph colour), on a field of dim dots.</summary>
+        /// <summary>The value at the end of a column of history (the average of its seconds), in graph percent; below 0 = no samples yet.</summary>
+        double ColumnValue(History data, int c, int cols, int bucket)
+        {
+            int count = data != null ? data.Count : 0;
+            int end = count - (cols - 1 - c) * bucket;
+            if (end <= 0) return -1;
+            int from = Math.Max(0, end - bucket), to = Math.Min(count, end);
+            if (to <= from) return -1;
+            double sum = 0;
+            for (int i = from; i < to; i++) sum += data[i];
+            double v = sum / (to - from);
+            if (_fullScale > 0) v = v * 100.0 / _fullScale;
+            return Math.Max(0, Math.Min(100, v));
+        }
+
+        static int Tall(double v, int rows) { return v < 0 ? 0 : Math.Max(1, (int)Math.Round(v / 100.0 * rows)); }
+
+        /// <summary>The dot field: a history (one column per bar, newest on the right in the graph colour), two mirrored, or a meter.</summary>
         void DrawField(DrawingContext dc, double x0, double y0, int cols, int rows, double cell)
         {
             double d = cell * 0.78, pad = (cell - d) / 2, r = d / 2;
-            int bucket = MetricView.BarBucket(cols, _span);
-            int count = _data != null ? _data.Count : 0;
+            Func<int, int, Brush, bool> dot = delegate (int c, int row, Brush b)
+            {
+                dc.DrawEllipse(b, null, new Point(x0 + c * cell + pad + r, y0 + row * cell + pad + r), r, r);
+                return true;
+            };
             Brush newest = _warn ? _warnFill : _accent;
+
+            if (_meter)
+            {
+                // fills column by column from the left, the last lit dot in the graph colour
+                int total = cols * rows, lit = (int)Math.Round(Math.Max(0, Math.Min(100, _percent)) / 100.0 * total);
+                if (_percent > 0 && lit == 0) lit = 1;
+                for (int c = 0; c < cols; c++)
+                    for (int row = 0; row < rows; row++)
+                    {
+                        int i = c * rows + row;
+                        dot(c, row, i >= lit ? _off : i == lit - 1 || _warn ? newest : _on);
+                    }
+                return;
+            }
+
+            int bucket = MetricView.BarBucket(cols, _span);
+            if (Two)
+            {
+                // download up from the middle, upload down from it (in its own colour, dimmer while it isn't the newest)
+                int half = rows / 2;
+                for (int c = 0; c < cols; c++)
+                {
+                    int up = Tall(ColumnValue(_data, c, cols, bucket), half), down = Tall(ColumnValue(_data2, c, cols, bucket), half);
+                    bool last = c == cols - 1;
+                    for (int row = 0; row < half; row++) dot(c, row, half - row <= up ? (last ? newest : _on) : _off);
+                    for (int row = 0; row < half; row++) dot(c, half + row, row < down ? (last ? _accent2 : _on2) : _off);
+                }
+                return;
+            }
+
             for (int c = 0; c < cols; c++)
             {
-                int end = count - (cols - 1 - c) * bucket;
-                double v = -1;
-                if (end > 0)
-                {
-                    int from = Math.Max(0, end - bucket), to = Math.Min(count, end);
-                    if (to > from) { double sum = 0; for (int i = from; i < to; i++) sum += _data[i]; v = sum / (to - from); }
-                }
-                int tall = v < 0 ? 0 : Math.Max(1, (int)Math.Round(Math.Max(0, Math.Min(100, v)) / 100.0 * rows));
+                double v = ColumnValue(_data, c, cols, bucket);
+                int tall = Tall(v, rows);
                 for (int row = 0; row < rows; row++)
                 {
                     bool lit = rows - row <= tall;
@@ -193,7 +260,7 @@ namespace vShell.Ui
                             : _load != null ? LoadBrush((rows - row) * 100.0 / rows)
                             : (_warnAt >= 0 && Crossed(v)) ? _warnFill
                             : _on;
-                    dc.DrawEllipse(b, null, new Point(x0 + c * cell + pad + r, y0 + row * cell + pad + r), r, r);
+                    dot(c, row, b);
                 }
             }
         }
@@ -215,42 +282,48 @@ namespace vShell.Ui
         }
 
         // ---- the number ----
+        // The number in dots when it can be ("n/a" can't); the unit in dots only when it's a sign or two ("%", "°C") - a unit of letters
+        // ("MB/s", "RPM", "W") stays in the font, small and dim, so it reads as a word.
 
-        /// <summary>Numbers in dots, and this one can be drawn so ("n/a" can't - it's written in the font).</summary>
-        bool InDots(string number) { return _dotNumbers && DotText.CanDraw(number + _unit); }
+        bool NumberInDots(string number) { return _dotNumbers && DotText.CanDraw(number); }
+        bool UnitInDots { get { return _dotNumbers && _unit.Length > 0 && _unit.Length <= 2 && DotText.CanDraw(_unit); } }
+        double UnitCell(double nc) { return _tile ? Math.Max(1.5, nc * 0.6) : nc; }
+        /// <summary>Space between the number and its unit; "%" and "°" sit right against it, a word after a gap.</summary>
+        double UnitGap(double nc) { return _unit.Length > 0 && (_unit[0] == '%' || _unit[0] == '°') ? nc * 1.5 : nc * 3; }
+
+        FormattedText NumberText(string number, double nc, Brush b) { return Text(number, nc * 7 * 1.25, FontWeights.SemiBold, b); }
+        FormattedText UnitText(double nc) { return Text(_unit, Math.Max(7, nc * 7 * (_tile ? 0.6 : 0.8)), FontWeights.Normal, _t.FgDim); }
 
         double NumberWidth(string number)
         {
             double nc = NumCell;
-            if (!InDots(number)) return Text(number + _unit, NumCell * 7 * 1.25, FontWeights.SemiBold, _t.Fg).WidthIncludingTrailingWhitespace;
-            return DotText.Width(number, nc) + (_unit.Length > 0 ? nc * 1.5 + DotText.Width(_unit, UnitCell(nc)) : 0);
+            double w = NumberInDots(number) ? DotText.Width(number, nc) : NumberText(number, nc, _on).WidthIncludingTrailingWhitespace;
+            if (_unit.Length == 0) return w;
+            return w + UnitGap(nc) + (UnitInDots ? DotText.Width(_unit, UnitCell(nc)) : UnitText(nc).WidthIncludingTrailingWhitespace);
         }
 
-        void DrawNumber(DrawingContext dc, double x, double y, double nc, bool big)
+        void DrawNumber(DrawingContext dc, double x, double y, double nc)
         {
             Brush ink = _warn ? _warnFill : _on;
-            if (!InDots(_number))
+            double bottom = y + nc * 7;
+            double right;
+            if (NumberInDots(_number)) right = DotText.Draw(dc, _number, x, y, nc, ink);
+            else
             {
-                // the theme's font, the number about as tall as the dots would be (the unit smaller and dim)
-                var num = Text(_number, nc * 7 * 1.25, FontWeights.SemiBold, ink);
-                double baseY = y + nc * 7 - num.Baseline;
-                dc.DrawText(num, new Point(x, baseY));
-                if (_unit.Length > 0)
-                {
-                    var u = Text(_unit, nc * 7 * 0.7, FontWeights.Normal, _t.FgDim);
-                    dc.DrawText(u, new Point(x + num.WidthIncludingTrailingWhitespace + 1, y + nc * 7 - u.Baseline));
-                }
-                return;
+                // the theme's font, the number about as tall as the dots would be
+                var num = NumberText(_number, nc, ink);
+                dc.DrawText(num, new Point(x, bottom - num.Baseline));
+                right = x + num.WidthIncludingTrailingWhitespace;
             }
-            double right = DotText.Draw(dc, _number, x, y, nc, ink);
-            if (_unit.Length > 0)
+            if (_unit.Length == 0) return;
+            double ux = right + UnitGap(nc);
+            if (UnitInDots) DotText.Draw(dc, _unit, ux, y, UnitCell(nc), _t.FgDim);       // a tile: smaller, on the number's top line
+            else
             {
-                // the unit in dim dots: in a widget smaller, on the number's top line; in a bar as big as the number (smaller can't be read)
-                DotText.Draw(dc, _unit, right + nc * 1.5, y, UnitCell(nc), _t.FgDim);
+                var u = UnitText(nc);
+                dc.DrawText(u, new Point(ux, bottom - u.Baseline));                       // on the number's baseline
             }
         }
-
-        double UnitCell(double nc) { return _widget ? Math.Max(1.5, nc * 0.6) : nc; }
 
         // ---- text ----
 
@@ -310,13 +383,17 @@ namespace vShell.Ui
             { ',', new[] { "..", "..", "..", "..", "##", ".#", "#." } },
             { '°', new[] { ".##.", "#..#", "#..#", ".##.", "....", "....", "...." } },
             { '-', new[] { "....", "....", "....", "####", "....", "....", "...." } },
+            { '+', new[] { ".....", "..#..", "..#..", "#####", "..#..", "..#..", "....." } },
             { '/', new[] { "....#", "....#", "...#.", "..#..", ".#...", "#....", "#...." } },
             { 'K', new[] { "#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#" } },
             { 'M', new[] { "#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#" } },
             { 'G', new[] { ".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####" } },
             { 'B', new[] { "####.", "#...#", "#...#", "####.", "#...#", "#...#", "####." } },
             { 'C', new[] { ".###.", "#...#", "#....", "#....", "#....", "#...#", ".###." } },
+            { 'F', new[] { "#####", "#....", "#....", "####.", "#....", "#....", "#...." } },
             { 'H', new[] { "#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#" } },
+            { 'V', new[] { "#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.." } },
+            { 'W', new[] { "#...#", "#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#" } },
             { 'Z', new[] { "#####", "....#", "...#.", "..#..", ".#...", "#....", "#####" } },
             { 'S', new[] { ".####", "#....", "#....", ".###.", "....#", "....#", "####." } },
             { ' ', new[] { "...", "...", "...", "...", "...", "...", "..." } },
@@ -325,7 +402,8 @@ namespace vShell.Ui
         /// <summary>Whether every character has a dot shape (letters are taken as capitals).</summary>
         public static bool CanDraw(string s)
         {
-            foreach (char ch in s ?? "") if (!Glyphs.ContainsKey(char.ToUpperInvariant(ch))) return false;
+            if (string.IsNullOrEmpty(s)) return false;
+            foreach (char ch in s) if (!Glyphs.ContainsKey(char.ToUpperInvariant(ch))) return false;
             return true;
         }
 

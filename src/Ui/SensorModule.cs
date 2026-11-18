@@ -21,9 +21,22 @@ namespace vShell.Ui
         readonly MetricView _view = new MetricView();
         readonly StackPanel _row;
         GaugeFace _gauge;
+        DotFace _dots;
 
-        public int RowCount { get { return _cfg.Style == "Tile" ? 0 : 1; } }
+        public int RowCount { get { return _cfg.Style == "Tile" || (Dotted && _bar.IsWidget) ? 0 : 1; } }
         bool Gauge { get { return GaugeFace.IsGauge(_cfg.Style); } }
+        /// <summary>The "Dots" style (0.38.227).</summary>
+        bool Dotted { get { return _cfg.Style == "Dots"; } }
+
+        /// <summary>The warning level as a percent of the graph range (below 0 = off).</summary>
+        double WarnPercent
+        {
+            get
+            {
+                double sp = _cfg.RangeMax - _cfg.RangeMin;
+                return _cfg.WarnOn && sp > 0 ? Math.Max(0, Math.Min(100, (_cfg.WarnAt - _cfg.RangeMin) / sp * 100.0)) : -1;
+            }
+        }
 
         public SensorModule(BarManager mgr, IModuleHost bar, ModuleConfig cfg)
         {
@@ -60,6 +73,13 @@ namespace vShell.Ui
                              _cfg.WarnOn && sp > 0 ? Theme.WarnFade : 0, t.Warn(_cfg.WarnColor));
                 _gauge.Look(_cfg, t);
                 Child = _gauge;
+                return;
+            }
+            if (Dotted)
+            {
+                if (_dots == null) _dots = new DotFace(_hist);
+                _dots.Setup(_cfg, _bar, t, _bar.IsWidget, WarnPercent);
+                Child = _dots;
                 return;
             }
             Child = _row;
@@ -126,6 +146,16 @@ namespace vShell.Ui
 
             if (addSample && r != null) _hist.Add(pct);
             if (Quiet) return;          // its widget is hidden: the sample only, nothing drawn (0.38.224)
+            if (Dotted && _dots != null)
+            {
+                string unitD = r == null ? "" : (string.IsNullOrEmpty(_cfg.SensorUnit) ? r.Unit : _cfg.SensorUnit);
+                string numD = r == null ? "n/a" : r.Value.ToString("F" + _cfg.Decimals, System.Globalization.CultureInfo.CurrentCulture);
+                string labD = string.IsNullOrEmpty(title) ? "" : title;
+                if (r == null && string.IsNullOrEmpty(_cfg.SensorKey)) { labD = HwInfo.SourceName; numD = "-"; }
+                _dots.Show(labD, numD, unitD, r != null ? r.Sensor : null, r != null && Theme.Crossed(r.Value, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow), pct);
+                ToolTip = r == null ? txt : r.Sensor + "\n" + r.Label + ": " + r.Text;
+                return;
+            }
             if (Gauge)
             {
                 string unitG = r == null ? "" : (string.IsNullOrEmpty(_cfg.SensorUnit) ? r.Unit : _cfg.SensorUnit);
