@@ -163,7 +163,9 @@ Everything registered here is taken away again by vShell when the plugin is remo
     (again when the settings or theme change; `tile` = the widget layout, for an `IMultiRow` module asking for 0 rows), then each reading
     `Show(label, number, unit, detail, warn, percent, percent2)` and, for amounts, `FullScale`. The detail (pass it only when the module's
     settings ask for it) goes after the number in a bar and at the top right of a tile; `Temp` (set before `Show`, vShell 0.38.228+) follows
-    it in the Secondary Accent colour. It follows the module's Numbers in dots
+    it in the Secondary Accent colour. Where a bar puts them follows the module's "Details in a bar" (`cfg.Bag` "dots.details", vShell
+    0.38.229+: Stacked, Under the label, Temperature in dots, Taking turns, Under the graph - `ModuleTypes.DotDetails`); offer it with
+    `p.Combo("Details in a bar", ...)` on that key if your module has details. It follows the module's Numbers in dots
     (`cfg.Bag` "dots.numbers"), Show text (the label), Graph length / height, Time shown and colour by load. An `InfoModule` with
     `HasGauges` gets this by itself when its Style is "Dots".
   - **Numbers alone:** `DotText.Draw(dc, text, x, y, cell, brush)` (returns the right edge), `DotText.Width(text, cell)`,

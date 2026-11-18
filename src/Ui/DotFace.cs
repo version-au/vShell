@@ -34,8 +34,10 @@ namespace vShell.Ui
         double _warnAt = -1;
         bool _warnBelow;
         double _fullScale;
-        double _keepNumW, _keepExtraW;
+        double _keepNumW, _keepExtraW, _keepColW, _keepColW2, _keepAfterW;
         Brush _tempBrush;
+        /// <summary>Where a bar's row puts the details: ModuleTypes.DotDetails (cfg.Bag "dots.details").</summary>
+        string _detailMode = "Stacked";
 
         string _label = "", _number = "", _unit = "", _detail, _temp;
         double _percent, _percent2 = -1;
@@ -66,7 +68,9 @@ namespace vShell.Ui
             _heightPercent = Math.Max(20, Math.Min(100, cfg.GraphHeightPercent));
             _span = Math.Max(60, Math.Min(History.Capacity, cfg.GraphSpan));
             _keepNumW = 0;
-            _keepExtraW = 0;
+            _keepExtraW = 0; _keepColW = 0; _keepColW2 = 0; _keepAfterW = 0;
+            _detailMode = cfg.Bag.Get("dots.details", "Stacked");
+            if (Array.IndexOf(ModuleTypes.DotDetails, _detailMode) < 0) _detailMode = "Stacked";
             _tempBrush = t.SecondaryAccent;
             if (cfg.LoadColors && ModuleTypes.HasLoadColors(cfg.Type))
             {
@@ -196,15 +200,13 @@ namespace vShell.Ui
                 if (HasExtra && ExtraWidth() > w - Pad * 2 - (_showLabel ? Spaced(_label, LabelSize).Width + 10 : 0)) h += LabelSize * 1.2 + 2;
                 return new Size(w, Math.Max(h, HostH));
             }
-            double width = 0;
-            if (_showLabel && _label.Length > 0) width += Spaced(_label, LabelSize).Width + 8;
             // the number's room never shrinks while the look stays the same, so the module doesn't jiggle as the number changes
             _keepNumW = Math.Max(_keepNumW, Math.Max(NumberWidth(_number), NumberWidth(_number.Length >= 3 ? new string('8', _number.Length) : "100")));
-            width += Columns(_graphW, BarCell) * BarCell + 8 + _keepNumW;
-            // the detail / temperature after the number (its room never shrinks either, while there is one)
-            _keepExtraW = HasExtra ? Math.Max(_keepExtraW, ExtraWidth()) : 0;
-            if (_keepExtraW > 0) width += 8 + _keepExtraW;
-            return new Size(Math.Ceiling(width) + 2, Math.Max(BarCell * BarRows, NumCell * 7));
+            // as tall as the bar (less a hair), so two lines of details have room; the dots stay centred in it
+            double barH = Math.Max(Math.Max(BarCell * BarRows, NumCell * 7), HostH - 4);
+            if (!double.IsInfinity(available.Height)) barH = Math.Min(barH, Math.Max(available.Height, Math.Max(BarCell * BarRows, NumCell * 7)));
+            double width = Row(null, barH);
+            return new Size(Math.Ceiling(width) + 2, barH);
         }
 
         static int Columns(double width, double cell) { return Math.Max(4, (int)Math.Floor(width / cell)); }
@@ -218,22 +220,185 @@ namespace vShell.Ui
             if (_tile) RenderTile(dc, w, h); else RenderRow(dc, w, h);
         }
 
-        void RenderRow(DrawingContext dc, double w, double h)
+        void RenderRow(DrawingContext dc, double w, double h) { Row(dc, h); }
+
+        // ---- a bar's row: where the details go ("Details in a bar", 0.38.229 - the one line it had made the module long) ----
+        //   Stacked            the clock speed over the temperature, small, after the number (one detail: one line)
+        //   Under the label    the temperature (else the detail) small under the label; the rest in the tooltip
+        //   Temperature in dots the temperature as a second dot number in the Secondary Accent colour; the detail in the tooltip
+        //                      (no temperature: the detail stacked)
+        //   Taking turns       the number, the detail and the temperature in turn every 3 s, small dots under it saying which
+        //   Under the graph    a flatter graph (3 rows) with the details in small type under it
+
+        double SmallSize(double h) { return Math.Max(7, Math.Min(Fs * 0.75, (h - 3) / 2.3)); }
+        static bool Has(string s) { return !string.IsNullOrEmpty(s); }
+
+        /// <summary>The temperature as a dot number: "61°C" -> "61°" (the scale letter dropped, as on a thermometer's dial).</summary>
+        static string TempDots(string t)
         {
-            double x = 0;
-            if (_showLabel && _label.Length > 0)
+            t = (t ?? "").Trim();
+            int deg = t.IndexOf('°');
+            return deg > 0 ? t.Substring(0, deg + 1) : t;
+        }
+
+        /// <summary>The bar's row: measures (dc null) or draws it in a row h tall; returns its width.</summary>
+        double Row(DrawingContext dc, double h)
+        {
+            bool draw = dc != null;
+            string mode = HasExtra ? _detailMode : "";
+            string det = Has(_detail) ? _detail : null, tmp = Has(_temp) ? _temp : null;
+            double x = 0, small = SmallSize(h);
+
+            // the label - with Under the label, one detail under it
+            if (mode == "Under the label")
+            {
+                string under = tmp ?? det;
+                var u = Text(under, small, FontWeights.Normal, tmp != null ? _tempBrush : _t.FgDim);
+                Size lab = _showLabel && _label.Length > 0 ? Spaced(_label, LabelSize) : new Size(0, 0);
+                _keepColW = Math.Max(_keepColW, Math.Max(lab.Width, u.WidthIncludingTrailingWhitespace));
+                if (draw)
+                {
+                    if (lab.Width > 0)
+                    {
+                        double top = (h - (lab.Height + u.Height - 1)) / 2;
+                        DrawSpaced(dc, _label, LabelSize, new Point(0, top), _t.FgDim);
+                        dc.DrawText(u, new Point(0, top + lab.Height - 1));
+                    }
+                    else dc.DrawText(u, new Point(0, (h - u.Height) / 2));
+                }
+                x += _keepColW + 8;
+            }
+            else if (_showLabel && _label.Length > 0)
             {
                 var lab = Spaced(_label, LabelSize);
-                DrawSpaced(dc, _label, LabelSize, new Point(x, (h - lab.Height) / 2), _t.FgDim);
+                if (draw) DrawSpaced(dc, _label, LabelSize, new Point(0, (h - lab.Height) / 2), _t.FgDim);
                 x += lab.Width + 8;
             }
-            double cell = BarCell;
-            int cols = Columns(_graphW, cell), rows = BarRows;
-            DrawField(dc, x, (h - cell * rows) / 2, cols, rows, cell);
-            x += cols * cell + 8;
-            double nc = NumCell;
-            DrawNumber(dc, x, (h - nc * 7) / 2, nc);
-            if (HasExtra) DrawExtra(dc, x + Math.Max(_keepNumW, NumberWidth(_number)) + 8, h / 2);
+
+            // the graph - with Under the graph, flatter, the details under it
+            if (mode == "Under the graph")
+            {
+                var line = Line(det, tmp, small);
+                double lineH = small * 1.25;
+                int rows = Two ? 4 : 3;
+                double cell = Math.Max(2, Math.Min(BarCell, (h - lineH - 3) / rows));
+                int cols = Columns(_graphW, cell);
+                double gw = cols * cell, lw = Width(line);
+                double top = (h - (rows * cell + 2 + lineH)) / 2;
+                if (draw)
+                {
+                    DrawField(dc, x, top, cols, rows, cell);
+                    DrawLine(dc, line, x, top + rows * cell + 2 + lineH / 2);
+                }
+                _keepColW2 = Math.Max(_keepColW2, Math.Max(gw, lw));
+                x += _keepColW2 + 8;
+            }
+            else
+            {
+                double cell = BarCell;
+                int cols = Columns(_graphW, cell), rows = BarRows;
+                if (draw) DrawField(dc, x, (h - cell * rows) / 2, cols, rows, cell);
+                x += cols * cell + 8;
+            }
+
+            double nc = NumCell, ny = (h - nc * 7) / 2;
+
+            // Taking turns: one spot for the number, the detail and the temperature
+            if (mode == "Taking turns")
+            {
+                var items = new List<string> { null };      // null = the number itself
+                if (det != null) items.Add(det);
+                if (tmp != null) items.Add(tmp);
+                double room = _keepNumW;
+                foreach (string s in items) if (s != null) room = Math.Max(room, TurnWidth(s, nc));
+                _keepAfterW = Math.Max(_keepAfterW, room);
+                if (draw)
+                {
+                    int phase = (int)(Environment.TickCount64 / 3000 % items.Count);
+                    bool pips = items.Count > 1 && h >= 22;
+                    double y = pips ? ny - 2 : ny;
+                    string s = items[phase];
+                    if (s == null) DrawNumber(dc, x, y, nc);
+                    else DrawTurn(dc, s, x, y, nc, s == tmp ? _tempBrush : _on);
+                    if (pips)
+                    {
+                        double pd = Math.Max(2, nc * 1.2);
+                        for (int i = 0; i < items.Count; i++)
+                            dc.DrawEllipse(i == phase ? _on : _off, null, new Point(x + pd / 2 + i * pd * 2.2, y + nc * 7 + 2 + pd / 2), pd / 2, pd / 2);
+                    }
+                }
+                return x + _keepAfterW;
+            }
+
+            if (draw) DrawNumber(dc, x, ny, nc);
+            x += Math.Max(_keepNumW, NumberWidth(_number));
+            if (mode == "" || mode == "Under the label" || mode == "Under the graph") return x;
+
+            // Temperature in dots: a second dot number (the detail goes to the tooltip); no temperature - the detail as Stacked shows it
+            if (mode == "Temperature in dots" && tmp != null)
+            {
+                string td = TempDots(tmp);
+                double tw = _dotNumbers && DotText.CanDraw(td) ? DotText.Width(td, nc) : NumberText(td, nc, _tempBrush).WidthIncludingTrailingWhitespace;
+                _keepAfterW = Math.Max(_keepAfterW, tw);
+                if (draw)
+                {
+                    if (_dotNumbers && DotText.CanDraw(td)) DotText.Draw(dc, td, x + nc * 4, ny, nc, _warn ? _warnFill : _tempBrush);
+                    else { var f = NumberText(td, nc, _tempBrush); dc.DrawText(f, new Point(x + nc * 4, ny + nc * 7 - f.Baseline)); }
+                }
+                return x + nc * 4 + _keepAfterW;
+            }
+
+            // Stacked: two short lines (one when there's one detail, or the bar is too slim for two)
+            bool two = det != null && tmp != null && h >= 24;
+            if (two)
+            {
+                var a = Text(det, small, FontWeights.Normal, _t.FgDim);
+                var b = Text(tmp, small, FontWeights.Normal, _tempBrush);
+                _keepAfterW = Math.Max(_keepAfterW, Math.Max(a.WidthIncludingTrailingWhitespace, b.WidthIncludingTrailingWhitespace));
+                if (draw)
+                {
+                    double top = (h - (a.Height + b.Height - 2)) / 2;
+                    dc.DrawText(a, new Point(x + 7, top));
+                    dc.DrawText(b, new Point(x + 7, top + a.Height - 2));
+                }
+            }
+            else
+            {
+                var line = Line(det, tmp, two || h >= 24 ? ExtraSize : small);
+                _keepAfterW = Math.Max(_keepAfterW, Width(line));
+                if (draw) DrawLine(dc, line, x + 7, h / 2);
+            }
+            return x + 7 + _keepAfterW;
+        }
+
+        /// <summary>The detail (dim) and " · " + the temperature (Secondary Accent) in one line of text runs.</summary>
+        List<FormattedText> Line(string det, string tmp, double size)
+        {
+            var parts = new List<FormattedText>();
+            if (det != null) parts.Add(Text(det, size, FontWeights.Normal, _t.FgDim));
+            if (tmp != null)
+            {
+                if (parts.Count > 0) parts.Add(Text(" · ", size, FontWeights.Normal, _t.FgDim));
+                parts.Add(Text(tmp, size, FontWeights.Normal, _tempBrush));
+            }
+            return parts;
+        }
+
+        static double Width(List<FormattedText> parts) { double w = 0; foreach (FormattedText f in parts) w += f.WidthIncludingTrailingWhitespace; return w; }
+
+        static void DrawLine(DrawingContext dc, List<FormattedText> parts, double x, double midY)
+        {
+            foreach (FormattedText f in parts) { dc.DrawText(f, new Point(x, midY - f.Height / 2)); x += f.WidthIncludingTrailingWhitespace; }
+        }
+
+        /// <summary>A detail taking its turn: in dots when it can be ("4.2 GHz", "61°C", "9.9/16.0 GB"), else in the font, as tall.</summary>
+        bool TurnInDots(string s) { return _dotNumbers && DotText.CanDraw(s); }
+        double TurnWidth(string s, double nc) { return TurnInDots(s) ? DotText.Width(s, nc) : NumberText(s, nc * 0.8, _on).WidthIncludingTrailingWhitespace; }
+        void DrawTurn(DrawingContext dc, string s, double x, double y, double nc, Brush b)
+        {
+            if (TurnInDots(s)) { DotText.Draw(dc, s, x, y, nc, b); return; }
+            var f = Text(s, nc * 7 * 1.0, FontWeights.SemiBold, b);
+            dc.DrawText(f, new Point(x, y + nc * 7 - f.Baseline));
         }
 
         void RenderTile(DrawingContext dc, double w, double h)

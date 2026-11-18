@@ -603,6 +603,11 @@ namespace vShell.Ui
                 Check(p, "Numbers in dots", delegate { return cfg.Bag.Get("dots.numbers", true); }, delegate (bool v) { cfg.Bag.Set("dots.numbers", v); },
                       "The number drawn in dots, like the graph. Off = the number in your font (easier to read when small).");
                 Check(p, "Show the label", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });
+                ComboRow(p, "Details in a bar", ModuleTypes.DotDetails, delegate { return cfg.Bag.Get("dots.details", "Stacked"); }, delegate (string v) { cfg.Bag.Set("dots.details", v); },
+                         "Where the clock speed, GB, upload, temperature … go in a bar. Stacked: two small lines after the number. Under the label: " +
+                         "the temperature (or the detail) under the label - the rest in the tooltip. Temperature in dots: a second dot number in the " +
+                         "Secondary Accent colour - the detail in the tooltip. Taking turns: the number, the detail and the temperature in turn every 3 seconds. " +
+                         "Under the graph: a flatter graph with the details under it. A widget tile always has them at its top right.");
             }
             else if (cfg.Style == "Ring")
                 Check(p, "Show the label beside the ring", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });

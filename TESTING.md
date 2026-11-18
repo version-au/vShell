@@ -3474,3 +3474,11 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 5. Colour by load on (CPU, Dots): in a bar and a widget every lit dot takes the colour of its height - the newest column too (it turns the warning colour past the warning level). Disk space, Dots + Colour by load: the fill goes from the low to the high colour left to right.
 6. Plugin API: docs\plugin-api.txt gains 'DotFace :: string Temp { set; }' only. Plugins with a MetricView Dots graph (Fans, Home Assistant, Proxmox) and colour by load: the newest column by load too.
 7. A widget's CPU module, Dots: Graph height 20-30 % - 3-4 rows of dots, the tile shorter; 60 % (default) - 7 rows; 100 % - 12 rows, the tile taller. Network: an even number of rows (half each side). Disk space: at most 4 rows. A widget with a tall module row: the dots sit at the tile's bottom.
+## 0.38.229 - Dots: Details in a bar
+A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the module > Graph > Details in a bar:
+1. Stacked (default): '4.2 GHz' over '61°C' (Secondary Accent) in small type after the number. Only one detail (temperature off): one line. A bar under 24 px: one line.
+2. Under the label: 'CPU' with '61°C' under it, nothing after the number; the clock speed in the tooltip. Temperature off: the clock speed under the label. Show the label off: just the detail there.
+3. Temperature in dots: '61°' as a second dot number in the Secondary Accent colour (the warning colour past the warning level); the clock speed in the tooltip. Numbers in dots off: in the font. Memory (no temperature): its GB as Stacked shows it.
+4. Taking turns: the number, '4.2 GHz' and '61°C' (in dots, the temperature in its colour) in turn every 3 s, three small dots under it saying which; the module keeps its width. Network's '↑ 610 KB/s' turns in the font.
+5. Under the graph: the graph 3 rows tall (4 for network) with '4.2 GHz · 61°C' under it; the module about as long as with no details.
+6. Every choice: the module keeps its width as the values change; a widget tile still shows the details at its top right; the other Dots modules (memory, GPU, network, disk, battery, sensors, Downloads) follow the same setting.
