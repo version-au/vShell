@@ -593,7 +593,15 @@ namespace vShell.Ui
                     Note(p, "Tile: the label, a big number and a sparkline (a meter for disk space). Set its width below (0 = as wide as its text); in a widget it is taller " +
                             "than one row; try it with Arrangement > Grid. Its colour and warning are below.");
             }
-            if (cfg.Style == "Ring")
+            if (cfg.Style == "Dots")
+            {
+                Note(p, "Dots: the readings as columns of dots on a dim dot field, the newest in the graph colour, with a small grey label. In a bar it's one " +
+                        "row; in a widget it's a tile - the label, a big number and the dot graph filling the rest (taller widgets get more rows).");
+                Check(p, "Numbers in dots", delegate { return cfg.Bag.Get("dots.numbers", true); }, delegate (bool v) { cfg.Bag.Set("dots.numbers", v); },
+                      "The number drawn in dots, like the graph. Off = the number in your font (easier to read when small).");
+                Check(p, "Show the label", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });
+            }
+            else if (cfg.Style == "Ring")
                 Check(p, "Show the label beside the ring", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });
             else if (cfg.Style != "Tile")
                 Check(p, "Show text", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });
@@ -651,6 +659,7 @@ namespace vShell.Ui
             string st = style ?? cfg.Style;
             bool line = all || st == "Line" || st == "Tile";
             bool boxed = all || st == "Line" || st == "Bars";
+            bool dots = st == "Dots";     // only the time shown
             if (line)
             {
                 ComboRow(p, "Line thickness", ModuleTypes.GraphLines, delegate { return cfg.GraphLine; }, delegate (string v) { cfg.GraphLine = v; });
@@ -668,7 +677,7 @@ namespace vShell.Ui
                 Check(p, "Grid lines", delegate { return cfg.GraphGrid; }, delegate (bool v) { cfg.GraphGrid = v; },
                       "Faint lines at a quarter, half and three quarters, and a dashed line at the warning level when the warning is on.");
             }
-            if (line || boxed)
+            if (line || boxed || dots)
             {
                 ComboRow(p, "Time shown", ModuleTypes.GraphSpanNames, delegate
                 {
@@ -680,7 +689,7 @@ namespace vShell.Ui
                     cfg.GraphSpan = ModuleTypes.GraphSpans[i < 0 ? 0 : i];
                 }, all
                     ? "Line and bar graphs. Longer times average a few seconds per point / bar; at 1 minute bars are a second each, as many as fit."
-                    : st == "Bars"
+                    : st == "Bars" || st == "Dots"
                     ? "At 1 minute each bar is a second, as many as fit. Longer times fit the whole time in: each bar is the average of a few seconds."
                     : "Longer times average a few seconds per point, so the line keeps its shape. The graph fills up as it goes (it starts empty).");
             }

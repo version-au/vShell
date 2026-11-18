@@ -554,10 +554,13 @@ namespace vShell.Ui
         readonly MetricView _view = new MetricView();
         readonly StackPanel _row;
         GaugeFace _gauge;
+        DotFace _dots;
         string _shownKey;
 
-        /// <summary>A tile in a widget is taller than one row: it sizes itself.</summary>
-        public int RowCount { get { return _cfg.Style == "Tile" ? 0 : 1; } }
+        /// <summary>A tile in a widget is taller than one row: it sizes itself (so does Dots in a widget).</summary>
+        public int RowCount { get { return _cfg.Style == "Tile" || (Dotted && _bar.IsWidget) ? 0 : 1; } }
+        /// <summary>The "Dots" style (CPU only for now).</summary>
+        bool Dotted { get { return _cfg.Style == "Dots"; } }
         bool Gauge { get { return GaugeFace.IsGauge(_cfg.Style); } }
 
         public MetricModule(BarManager mgr, IModuleHost bar, ModuleConfig cfg)
@@ -594,6 +597,14 @@ namespace vShell.Ui
                               _cfg.WarnOn ? Theme.WarnFade : 0, t.Warn(_cfg.WarnColor));
                 _gauge.Look(_cfg, t);
                 Child = _gauge;
+                return;
+            }
+            if (Dotted)
+            {
+                if (_dots == null) _dots = new DotFace(_hist);
+                _dots.Setup(_cfg, _bar, t);
+                Child = _dots;
+                _shownKey = null;
                 return;
             }
             Child = _row;
@@ -727,6 +738,18 @@ namespace vShell.Ui
                 if (_cfg.Type == ModuleTypes.Cpu && txt.Contains(" · ")) detail = txt.Substring(txt.IndexOf(" · ") + 3);      // the clock speed
                 bool na = txt.EndsWith("n/a");
                 _gauge.Show(label, na ? "n/a" : v.ToString("0"), na ? "" : "%", detail, v, Theme.Crossed(v, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow), temp);
+                ToolTip = txt + (temp != null ? "  " + temp : "");
+                return;
+            }
+
+            if (Dotted && _dots != null)
+            {
+                if (addSample) _hist.Add(v);
+                bool na = txt.EndsWith("n/a");
+                string detail = txt.Contains(" · ") ? txt.Substring(txt.IndexOf(" · ") + 3) : null;     // the clock speed
+                if (temp != null) detail = detail == null ? temp : detail + " · " + temp;
+                _dots.Show(_cfg.Type == ModuleTypes.Memory ? "RAM" : _cfg.Type == ModuleTypes.Gpu ? "GPU" : "CPU", na ? "n/a" : v.ToString("0"), na ? "" : "%", detail,
+                           Theme.Crossed(v, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow));
                 ToolTip = txt + (temp != null ? "  " + temp : "");
                 return;
             }

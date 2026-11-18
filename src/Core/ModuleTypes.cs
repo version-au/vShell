@@ -179,8 +179,8 @@ namespace vShell.Core
         }
         /// <summary>Notification sources the plugins add ("Komodo", "Seerr", "3D printer", "Downloads", "UniFi", "Protect", "Proxmox", "Home Assistant", "Jellyfin").</summary>
         public static readonly List<string> ExtraSources = new List<string>();
-        /// <summary>CPU also has "Cores": a small bar per thread (logical processor).</summary>
-        public static readonly string[] CpuStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile", "Cores" };
+        /// <summary>CPU also has "Cores" (a small bar per thread - logical processor) and "Dots" (dot graph and dot numbers - 0.38.226, CPU first).</summary>
+        public static readonly string[] CpuStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile", "Cores", "Dots" };
         public static string[] StylesFor(string type) { return type == Cpu ? CpuStyles : HasGauges(type) ? GaugeStyles : GraphStyles; }
 
         /// <summary>

@@ -3444,3 +3444,10 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 1. Two widgets with rounded corners (e.g. 16): drag one so its edge lines up with the other's - both edges glow only along their straight part, starting and ending where the curves begin, with short soft tips; nothing over the corners.
 2. Square corners (0): the glow runs the whole edge, as before. A tiny widget (corners bigger than half its side) keeps a short glow in the middle of the edge.
 3. A group drag (Ctrl+click several, drag one): each widget's edge stops before its own corners; the group's outline stops before the largest corner in the group. Resizing (Resize, then drag an edge): the same.
+
+## 0.38.226 - the CPU module's Dots style
+1. Settings > a bar's CPU module > Graph > Style = Dots: "CPU" (small, grey, spaced capitals), a dot graph 4 dots tall (the newest column in the graph colour, empty dots dim) and "37%" in dots. Graph length / Graph height (%) size the dots; the module keeps its width as the number changes.
+2. Numbers in dots off: the number in the bar's font, the % smaller and grey. Show the label off: no "CPU".
+3. A widget's CPU module set to Dots: a tile - "CPU" top left (the clock speed / temperature on the right when Show clock speed / temperature are on), a big dot number, and the dot graph filling the rest; make the widget taller: more rows (up to 12). Its width follows the widget.
+4. Time shown 5 / 15 minutes: each column averages a few seconds. Warning on (e.g. 80 %): past it the number and the newest column turn the warning colour, and columns past it too. Colour by load: lit dots coloured by their height.
+5. Light and dark themes: empty dots stay faint on both. Hide the widget behind a window (0.38.224): it stops drawing and catches up when it shows again.
