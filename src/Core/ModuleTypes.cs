@@ -153,7 +153,7 @@ namespace vShell.Core
         /// "Dots" (dot graph and dot numbers - 0.38.227).</summary>
         public static readonly string[] GaugeStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile", "Dots" };
         /// <summary>Dots in a bar: where the details (clock speed, GB, temperature …) go - "dots.details" in the module's bag (0.38.229).</summary>
-        public static readonly string[] DotDetails = { "Stacked", "Under the label", "Temperature in dots", "Taking turns", "Under the graph" };
+        [PluginApi] public static readonly string[] DotDetails = { "Stacked", "Under the label", "Temperature in dots", "Taking turns", "Under the graph" };
         /// <summary>Battery: the plain graphs and Dots.</summary>
         public static readonly string[] BatteryStyles = { "Text", "Meter", "Bars", "Line", "Dots" };
         public static bool HasGauges(string type) { return type == Cpu || type == Memory || type == Gpu || type == Disk || type == Hwinfo || type == Downloads || type == Network; }

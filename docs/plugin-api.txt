@@ -249,6 +249,7 @@ ModulePics :: static TextBlock G(int, Brush, double)
 ModulePics :: static TextBlock T(Theme, string, Brush, double, bool?)
 ModulePics :: static readonly double[] Wave1
 ModulePics :: static readonly double[] Wave2
+ModuleTypes :: static readonly string[] DotDetails
 ModuleTypes :: static readonly string[] NotifyLevels
 ModuleTypes :: static readonly string[] TileLayouts
 ModuleTypes :: static string Display(string)
