@@ -34,9 +34,10 @@ namespace vShell.Ui
         double _warnAt = -1;
         bool _warnBelow;
         double _fullScale;
-        double _keepNumW;
+        double _keepNumW, _keepExtraW;
+        Brush _tempBrush;
 
-        string _label = "", _number = "", _unit = "", _detail;
+        string _label = "", _number = "", _unit = "", _detail, _temp;
         double _percent, _percent2 = -1;
         bool _warn;
 
@@ -65,6 +66,8 @@ namespace vShell.Ui
             _heightPercent = Math.Max(20, Math.Min(100, cfg.GraphHeightPercent));
             _span = Math.Max(60, Math.Min(History.Capacity, cfg.GraphSpan));
             _keepNumW = 0;
+            _keepExtraW = 0;
+            _tempBrush = t.SecondaryAccent;
             if (cfg.LoadColors && ModuleTypes.HasLoadColors(cfg.Type))
             {
                 Color main = t.MainAccent.Color;
@@ -91,7 +94,7 @@ namespace vShell.Ui
         /// </summary>
         public void Show(string label, string number, string unit, string detail, bool warn, double percent = 0, double percent2 = -1)
         {
-            bool resize = (number ?? "").Length != _number.Length || (unit ?? "") != _unit || (detail ?? "") != (_detail ?? "") || label != _label ||
+            bool resize = (number ?? "").Length != _number.Length || (unit ?? "") != _unit || (detail ?? "").Length != (_detail ?? "").Length || label != _label ||
                           (percent2 >= 0) != (_percent2 >= 0);     // a second series makes the bar's graph taller
             _label = label ?? ""; _number = number ?? ""; _unit = unit ?? ""; _detail = detail; _warn = warn;
             _percent = percent; _percent2 = percent2;
@@ -99,7 +102,59 @@ namespace vShell.Ui
             InvalidateVisual();
         }
 
+        /// <summary>
+        /// A temperature (or another reading) shown after the detail in the Secondary Accent colour, as the other styles show it; null = none.
+        /// Set it before Show. (0.38.228)
+        /// </summary>
+        public string Temp
+        {
+            set
+            {
+                if (value == _temp) return;
+                _temp = value;
+                if (!_tile) InvalidateMeasure();
+                InvalidateVisual();
+            }
+        }
+
         bool Two { get { return !_meter && _data2 != null && _data2.Count > 0 && _percent2 >= 0; } }
+
+        // ---- the detail and temperature: after the number in a bar, at the top right in a tile ----
+
+        bool HasExtra { get { return !string.IsNullOrEmpty(_detail) || !string.IsNullOrEmpty(_temp); } }
+        double ExtraSize { get { return _tile ? LabelSize : Math.Max(7, Math.Min(Fs * 0.85, HostH * 0.42)); } }
+
+        /// <summary>The detail (dim) and " · " + the temperature (Secondary Accent) as text runs.</summary>
+        List<FormattedText> ExtraParts()
+        {
+            var parts = new List<FormattedText>();
+            double size = ExtraSize;
+            if (!string.IsNullOrEmpty(_detail)) parts.Add(Text(_detail, size, FontWeights.Normal, _t.FgDim));
+            if (!string.IsNullOrEmpty(_temp))
+            {
+                if (parts.Count > 0) parts.Add(Text(" · ", size, FontWeights.Normal, _t.FgDim));
+                parts.Add(Text(_temp, size, FontWeights.Normal, _tempBrush ?? _t.FgDim));
+            }
+            return parts;
+        }
+
+        double ExtraWidth()
+        {
+            double w = 0;
+            foreach (FormattedText f in ExtraParts()) w += f.WidthIncludingTrailingWhitespace;
+            return w;
+        }
+
+        /// <summary>Draws the parts from x, their text centred on midY; returns the right edge.</summary>
+        double DrawExtra(DrawingContext dc, double x, double midY)
+        {
+            foreach (FormattedText f in ExtraParts())
+            {
+                dc.DrawText(f, new Point(x, midY - f.Height / 2));
+                x += f.WidthIncludingTrailingWhitespace;
+            }
+            return x;
+        }
 
         // ---- sizes (all from the theme's font size, so a bigger font makes bigger dots) ----
 
@@ -125,6 +180,8 @@ namespace vShell.Ui
                 double h = Pad + LabelSize * 1.4 + 6 + NumCell * 7 + 8 + TileCell * 4 + Pad;
                 double w = Math.Max(_graphW, 120) + Pad * 2;
                 if (!double.IsInfinity(available.Width)) w = Math.Min(w, available.Width);
+                // the detail / temperature on a line of its own when it doesn't fit beside the label
+                if (HasExtra && ExtraWidth() > w - Pad * 2 - (_showLabel ? Spaced(_label, LabelSize).Width + 10 : 0)) h += LabelSize * 1.2 + 2;
                 return new Size(w, Math.Max(h, HostH));
             }
             double width = 0;
@@ -132,6 +189,9 @@ namespace vShell.Ui
             // the number's room never shrinks while the look stays the same, so the module doesn't jiggle as the number changes
             _keepNumW = Math.Max(_keepNumW, Math.Max(NumberWidth(_number), NumberWidth(_number.Length >= 3 ? new string('8', _number.Length) : "100")));
             width += Columns(_graphW, BarCell) * BarCell + 8 + _keepNumW;
+            // the detail / temperature after the number (its room never shrinks either, while there is one)
+            _keepExtraW = HasExtra ? Math.Max(_keepExtraW, ExtraWidth()) : 0;
+            if (_keepExtraW > 0) width += 8 + _keepExtraW;
             return new Size(Math.Ceiling(width) + 2, Math.Max(BarCell * BarRows, NumCell * 7));
         }
 
@@ -161,28 +221,31 @@ namespace vShell.Ui
             x += cols * cell + 8;
             double nc = NumCell;
             DrawNumber(dc, x, (h - nc * 7) / 2, nc);
+            if (HasExtra) DrawExtra(dc, x + Math.Max(_keepNumW, NumberWidth(_number)) + 8, h / 2);
         }
 
         void RenderTile(DrawingContext dc, double w, double h)
         {
             double y = Pad;
-            if (_showLabel)
+            if (_showLabel || HasExtra)
             {
-                var lab = Spaced(_label, LabelSize);
-                DrawSpaced(dc, _label, LabelSize, new Point(Pad, y), _t.FgDim);
-                if (!string.IsNullOrEmpty(_detail))
+                Size lab = _showLabel ? Spaced(_label, LabelSize) : new Size(0, LabelSize * 1.2);
+                if (_showLabel) DrawSpaced(dc, _label, LabelSize, new Point(Pad, y), _t.FgDim);
+                double lineH = Math.Max(lab.Height, LabelSize * 1.2);
+                if (HasExtra)
                 {
-                    var det = Text(_detail, LabelSize, FontWeights.Normal, _t.FgDim);
-                    double room = w - Pad * 2 - lab.Width - 10;
-                    if (room > 20)
+                    // the detail and temperature on the label's line, at the right; when they don't fit, under the label on a line of their own
+                    double room = w - Pad * 2 - (_showLabel ? lab.Width + 10 : 0), ew = ExtraWidth();
+                    if (ew <= room) DrawExtra(dc, w - Pad - ew, y + lineH / 2);
+                    else
                     {
-                        det.MaxTextWidth = room;
-                        det.Trimming = TextTrimming.CharacterEllipsis;
-                        det.MaxLineCount = 1;
-                        dc.DrawText(det, new Point(w - Pad - Math.Min(room, det.WidthIncludingTrailingWhitespace), y));
+                        if (_showLabel) y += lineH + 2;
+                        dc.PushClip(new RectangleGeometry(new Rect(Pad, y, Math.Max(0, w - Pad * 2), lineH)));
+                        DrawExtra(dc, Pad, y + lineH / 2);
+                        dc.Pop();
                     }
                 }
-                y += Math.Max(lab.Height, LabelSize * 1.2) + 6;
+                y += lineH + 6;
             }
             double nc = NumCell;
             DrawNumber(dc, Pad, y, nc);
@@ -234,7 +297,8 @@ namespace vShell.Ui
                     for (int row = 0; row < rows; row++)
                     {
                         int i = c * rows + row;
-                        dot(c, row, i >= lit ? _off : i == lit - 1 || _warn ? newest : _on);
+                        // colour by load: each dot the colour of its place along the fill (low on the left, high on the right)
+                        dot(c, row, i >= lit ? _off : _warn ? newest : _load != null ? LoadBrush((c + 1) * 100.0 / cols) : i == lit - 1 ? newest : _on);
                     }
                 return;
             }
@@ -261,8 +325,9 @@ namespace vShell.Ui
                 for (int row = 0; row < rows; row++)
                 {
                     bool lit = rows - row <= tall;
+                    // colour by load: every lit dot (the newest column too) the colour of its height; past the warning the newest is still the warning colour
                     Brush b = !lit ? _off
-                            : c == cols - 1 ? newest
+                            : c == cols - 1 && (_load == null || _warn) ? newest
                             : _load != null ? LoadBrush((rows - row) * 100.0 / rows)
                             : (_warnAt >= 0 && Crossed(v)) ? _warnFill
                             : _on;

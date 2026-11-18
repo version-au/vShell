@@ -3466,3 +3466,10 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 12. Claude usage 2.1.0: Meter style = Dots - each limit a row of dots filling up (amber / red past its warning). PeaNUT 2.1.0: Battery meter on, Meter style = Dots - dots filling with the charge (red under 25 %).
 13. Those plugins on vShell 0.38.226 or older: Dots draws a plain meter (no error).
 14. Settings > About > Plugin SDK > Download: Include pre-releases on (and the pre-release newer than the release) - https://vsuite.vrsion.com/vshell/pre/sdk.zip, its plugin-api.txt says vShell 0.38.227 and lists DotFace / DotText; off (or the update site not answering) - vshell/sdk.zip, the release's.
+## 0.38.228 - Dots: details and temperature in a bar, colour by load
+1. A bar's CPU module, Dots, Show clock speed + Show temperature: after the number '4.2 GHz · 61°C' (the temperature in the Secondary Accent colour); the module keeps its width as they change. Off: just the number.
+2. Memory, Dots, More detail on: '9.9/16.0 GB' after the number (bar) / top right (widget tile); off: none (before: always in a tile). GPU, More detail: the VRAM; Show temperature: its temperature.
+3. Network, Dots: the upload speed after the number in a bar; Show the Wi-Fi name: the name and signal first (also in Ring / Tile now). Disk, More detail: the GB. Battery: 'charging' or the time left on battery, nothing while plugged in and full. HWiNFO sensor: no sensor name in a bar (it is in a widget tile).
+4. A widget tile whose detail doesn't fit beside the label: on its own line under the label (the tile a little taller).
+5. Colour by load on (CPU, Dots): in a bar and a widget every lit dot takes the colour of its height - the newest column too (it turns the warning colour past the warning level). Disk space, Dots + Colour by load: the fill goes from the low to the high colour left to right.
+6. Plugin API: docs\plugin-api.txt gains 'DotFace :: string Temp { set; }' only. Plugins with a MetricView Dots graph (Fans, Home Assistant, Proxmox) and colour by load: the newest column by load too.

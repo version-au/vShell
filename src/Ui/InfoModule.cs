@@ -377,6 +377,7 @@ namespace vShell.Ui
             }
             string tip = s.Connected ? s.Adapter + (s.Address.Length > 0 ? "  " + s.Address : "") + "\nDownloaded " + Bytes(s.TotalDown) + ", uploaded " + Bytes(s.TotalUp) + " since the adapter came up" : (string.IsNullOrEmpty(Cfg.NetInterface) ? "No network adapter with a gateway is connected" : Cfg.NetInterface + " isn't connected");
 
+            string wifiText = null;
             if (Cfg.ShowWifi)
             {
                 string ssid; int sig;
@@ -384,6 +385,7 @@ namespace vShell.Ui
                 if (ssid.Length > 0)
                 {
                     string w = ssid + (sig >= 0 ? " " + sig + "%" : "");
+                    wifiText = w;
                     txt = Cfg.ShownLines2 ? w + "\n" + txt.Replace("\n", "  ") : w + "  " + txt;
                     tip = "Wi-Fi: " + ssid + (sig >= 0 ? " (" + sig + "% signal)" : "") + "\n" + tip;
                 }
@@ -413,6 +415,7 @@ namespace vShell.Ui
             r.Number = sp > 0 ? dl.Substring(0, sp) : dl;
             r.Unit = sp > 0 ? dl.Substring(sp + 1) : "";
             r.Detail = s.Connected ? "↑ " + Speed(s.UpBytesPerSec, Cfg.UseBits) : "";
+            if (wifiText != null) r.Detail = wifiText + (r.Detail.Length > 0 ? "  " + r.Detail : "");     // Show the Wi-Fi name (Dots, Ring, Tile)
         }
     }
 
@@ -560,7 +563,8 @@ namespace vShell.Ui
             r.Label = Prefix("BAT").Trim();
             r.Number = b.Percent >= 0 ? b.Percent.ToString(CultureInfo.CurrentCulture) : "?";
             r.Unit = b.Percent >= 0 ? "%" : "";
-            r.Detail = state + (!b.OnAc && b.SecondsLeft > 0 ? " · " + Duration(TimeSpan.FromSeconds(b.SecondsLeft)) + " left" : "");
+            // as the text's "+": charging, or the time left on battery (nothing while plugged in and full)
+            r.Detail = b.Charging ? "charging" : !b.OnAc && b.SecondsLeft > 0 ? Duration(TimeSpan.FromSeconds(b.SecondsLeft)) + " left" : "";
             r.Text = Prefix("BAT") + (b.Percent >= 0 ? b.Percent + "%" : "?") + (b.Charging ? " +" : "");
             r.Tip = (b.Percent >= 0 ? b.Percent + "%, " : "") + state +
                     (!b.OnAc && b.SecondsLeft > 0 ? "\n" + Duration(TimeSpan.FromSeconds(b.SecondsLeft)) + " remaining" : "");

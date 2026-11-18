@@ -161,7 +161,9 @@ Everything registered here is taken away again by vShell when the plugin is remo
     by load and `FullScale` work as in the other styles. On an older vShell it draws a meter, so offering "Dots" is safe.
   - **A whole module face:** `new DotFace(history, history2 = null)` - `Setup(cfg, host, theme, tile, warnPercent = NaN, meter = false)`
     (again when the settings or theme change; `tile` = the widget layout, for an `IMultiRow` module asking for 0 rows), then each reading
-    `Show(label, number, unit, detail, warn, percent, percent2)` and, for amounts, `FullScale`. It follows the module's Numbers in dots
+    `Show(label, number, unit, detail, warn, percent, percent2)` and, for amounts, `FullScale`. The detail (pass it only when the module's
+    settings ask for it) goes after the number in a bar and at the top right of a tile; `Temp` (set before `Show`, vShell 0.38.228+) follows
+    it in the Secondary Accent colour. It follows the module's Numbers in dots
     (`cfg.Bag` "dots.numbers"), Show text (the label), Graph length / height, Time shown and colour by load. An `InfoModule` with
     `HasGauges` gets this by itself when its Style is "Dots".
   - **Numbers alone:** `DotText.Draw(dc, text, x, y, cell, brush)` (returns the right edge), `DotText.Width(text, cell)`,

@@ -152,7 +152,8 @@ namespace vShell.Ui
                 string numD = r == null ? "n/a" : r.Value.ToString("F" + _cfg.Decimals, System.Globalization.CultureInfo.CurrentCulture);
                 string labD = string.IsNullOrEmpty(title) ? "" : title;
                 if (r == null && string.IsNullOrEmpty(_cfg.SensorKey)) { labD = HwInfo.SourceName; numD = "-"; }
-                _dots.Show(labD, numD, unitD, r != null ? r.Sensor : null, r != null && Theme.Crossed(r.Value, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow), pct);
+                // which sensor: in a tile only (too long for a bar)
+                _dots.Show(labD, numD, unitD, r != null && _bar.IsWidget ? r.Sensor : null, r != null && Theme.Crossed(r.Value, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow), pct);
                 ToolTip = r == null ? txt : r.Sensor + "\n" + r.Label + ": " + r.Text;
                 return;
             }

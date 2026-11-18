@@ -3,6 +3,13 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.228
+
+- Dots in a bar shows the module's details after the number, as the other styles do: the CPU's clock speed, memory's used / total GB and the GPU's VRAM (More detail), the temperature (in the Secondary Accent colour), network's upload and Wi-Fi name, disk's GB, battery's charging / time left.
+- Dots: memory's used / total GB only shows with More detail on, as in the other styles.
+- Dots with Colour by load: the newest column and disk space's fill take the load colours too.
+- Plugin API: DotFace.Temp (a temperature after the detail).
+
 ## 0.38.227 · pre-release
 
 - Memory, GPU, disk, network, battery, HWiNFO sensor and Downloads modules have the Dots style too: network mirrors download and upload round a middle line, disk space fills up from the left.

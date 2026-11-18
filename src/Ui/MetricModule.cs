@@ -370,8 +370,9 @@ namespace vShell.Ui
                 for (int row = 0; row < rows; row++)
                 {
                     bool lit = rows - row <= t;
+                    // colour by load: every lit dot (the newest column too) the colour of its height
                     Brush b = !lit ? off
-                            : last ? FillFor(v, Fill)
+                            : last && LoadColors == null ? FillFor(v, Fill)
                             : LoadColors != null ? LoadBrushAt((rows - row) * 100.0 / rows)
                             : Warned(v) ? WarnFill
                             : ink;
@@ -842,11 +843,13 @@ namespace vShell.Ui
             {
                 if (addSample) _hist.Add(v);
                 bool na = txt.EndsWith("n/a");
+                // as the other styles: memory's used / total and the GPU's VRAM with More detail, the CPU's clock speed with Show clock speed,
+                // the temperature with Show temperature (in the Secondary Accent colour)
                 string detail = null;
-                if (_cfg.Type == ModuleTypes.Memory) detail = string.Format("{0:0.0} of {1:0} GB", st.MemUsedGb, st.MemTotalGb);
-                else if (_cfg.Type == ModuleTypes.Gpu && txt.Contains(" - ")) detail = txt.Substring(txt.IndexOf(" - ") + 3);     // VRAM (More detail)
-                else if (txt.Contains(" · ")) detail = txt.Substring(txt.IndexOf(" · ") + 3);                                     // the clock speed
-                if (temp != null) detail = detail == null ? temp : detail + " · " + temp;
+                if (_cfg.Type == ModuleTypes.Memory) { if (_cfg.ShowDetail) detail = string.Format("{0:0.0}/{1:0.0} GB", st.MemUsedGb, st.MemTotalGb); }
+                else if (_cfg.Type == ModuleTypes.Gpu) { if (_cfg.ShowDetail && txt.Contains(" - ")) detail = txt.Substring(txt.IndexOf(" - ") + 3); }
+                else if (txt.Contains(" · ")) detail = txt.Substring(txt.IndexOf(" · ") + 3);
+                _dots.Temp = temp;
                 _dots.Show(_cfg.Type == ModuleTypes.Memory ? "RAM" : _cfg.Type == ModuleTypes.Gpu ? "GPU" : "CPU", na ? "n/a" : v.ToString("0"), na ? "" : "%", detail,
                            Theme.Crossed(v, _cfg.WarnOn, _cfg.WarnAt, _cfg.WarnBelow), v);
                 ToolTip = txt + (temp != null ? "  " + temp : "");
