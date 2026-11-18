@@ -168,8 +168,19 @@ namespace vShell.Ui
         double NumCell { get { return _tile ? Math.Max(2, Math.Round(Fs * 0.32 * 2) / 2) : Math.Max(1.4, Math.Min(Fs * 0.16, (HostH - 6) / 7.0)); } }
         double LabelSize { get { return _tile ? Math.Max(7, Fs * 0.8) : Math.Max(7, Math.Min(Fs * 0.72, HostH * 0.36)); } }
         /// <summary>The bar's graph rows: 4 (6 with two series, 3 each side of the middle), filling the graph height.</summary>
-        int BarRows { get { return Two ? 6 : 4; } }
-        double BarCell { get { return Math.Max(2, HostH * _heightPercent / 100.0 / BarRows); } }
+        // A bar's dots keep one size - the default graph's (60 % of the bar, 4 rows; 6 with two series) - and Graph height gives it more or
+        // fewer rows of them (V, 0.38.233: before, a taller graph meant bigger dots and fewer of them across the same length)
+        double BarCell { get { return Math.Max(2, HostH * 0.6 / (Two ? 6 : 4)); } }
+        int BarRows
+        {
+            get
+            {
+                int rows = Math.Max(Two ? 2 : 2, (int)Math.Round(HostH * _heightPercent / 100.0 / BarCell));
+                if (Two && rows % 2 == 1) rows++;
+                while (rows > 2 && rows * BarCell > HostH - 2) rows -= Two ? 2 : 1;     // never taller than the bar
+                return rows;
+            }
+        }
         double TileCell { get { return Math.Max(4, Math.Round(Fs * 0.6 * 2) / 2); } }
         /// <summary>A tile's dot rows from Graph height: 100 % = 12 rows, 60 % (the default) = 7, at least 3 - an even number for two series;
         /// a meter (disk space) at most 4, a band. (Before 0.38.228 a tile took as many rows as fitted and Graph height did nothing.)</summary>

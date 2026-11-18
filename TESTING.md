@@ -3503,3 +3503,5 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 4. A settings.json with GraphHeightPercent 0 loads as automatic (not raised to 20); 5 still becomes 20.
 5. A bar's CPU module, Dots, Details in a bar = Under the graph: the graph 4 dots high with the details under it, both inside the bar (28 and 40 px bars).
 6. Fans 1.2.1 on a bar, Dots, Speed = Under the graph: each fan's name starts right under the graph's left edge; the graph's right edge (the newest column) at its end. Line / Bars / Meter the same. Home Assistant / Proxmox dot graphs fill their width too.
+7. A 32 px bar's CPU module, Dots: Graph height 30 % - 2 rows; 60 % (or 0 = automatic) - 4 rows; 100 % - 6 rows; the dots the same size every time and the graph the same length (the module doesn't get shorter). Network: rows in twos (half each side). A slimmer / taller bar: smaller / bigger dots.
+8. Fans / Home Assistant / Proxmox Dots graphs: a taller graph gets more rows of dots (about 5 px each at most), not bigger ones.

@@ -334,8 +334,9 @@ namespace vShell.Ui
                 return;
             }
             bool two = Data2 != null && Data2.Count > 0 && Value2 >= 0;
-            // about 4 dots tall (an even number for two series), at least 2.5 px a dot
-            int rows = Math.Max(two ? 2 : 1, (int)Math.Round(h / Math.Max(2.5, h / 4)));
+            // dots of one size (about a quarter of the graph, at least 2.5 px and at most 5 px): a taller graph gets more rows of them, not
+            // bigger dots (0.38.233) - an even number of rows for two series
+            int rows = Math.Max(two ? 2 : 1, (int)Math.Round(h / Math.Max(2.5, Math.Min(5, h / 4))));
             if (two && rows % 2 == 1) rows++;
             double cell = h / rows;
             int cols = Math.Max(3, (int)Math.Floor(w / cell));
