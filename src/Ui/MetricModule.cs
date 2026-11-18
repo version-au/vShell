@@ -345,9 +345,10 @@ namespace vShell.Ui
             double cell = Math.Min(target, h / rows);
             int cols = Math.Max(3, (int)Math.Floor(w / cell));
             int bucket = BarBucket(cols, Span);
-            // the columns spread over the whole width, so the graph's left and right edges are exactly where it is (text placed under
-            // its left edge lines up - the Fans plugin's Under the graph); each dot round, in the smaller of its cell's sides
-            double cw = w / cols;
+            // square cells, the same spacing across as down - as vShell's own Dots modules (0.38.237: spreading the columns over the whole
+            // width made the gaps across wider than theirs); the columns start at the graph's left edge, so text placed under it lines up
+            // (the Fans plugin's Under the graph) - what's left over (under one dot) is at the right
+            double cw = cell;
             double y0 = (h - rows * cell) / 2;      // the rows centred in the graph's height
             Action<double, double, Brush> put = delegate (double cx, double cy, Brush b) { DotIn(dc, cx, y0 + cy, cw, cell, b); };
             Brush ink = Ink ?? Fill;

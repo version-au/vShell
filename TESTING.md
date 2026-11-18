@@ -3515,3 +3515,5 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 1. Bars of 28, 32, 40 and 48 px, each with a CPU module (Dots, Graph height automatic) and a Fans module (Dots, automatic): the same size dots, 4 rows each, in every bar.
 2. Fans Graph height 80 %: more rows of those same dots. Home Assistant (an entity's graph = Dots) and Proxmox (Style = Dots) in the same bar: the same size dots.
 3. The Fans bar module's popup (its tiles, Dots style): dots sized from the graph itself (no bar there), as before.
+## 0.38.237 - plugin dot graphs spaced as the CPU module's
+1. A bar with a CPU module and a Fans module, both Dots: the dots the same size and the same distance apart across and down. Fans Speed = Under the graph: the name still starts under the graph's left edge (the newest column may sit a hair short of the right end).
