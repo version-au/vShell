@@ -99,7 +99,7 @@ namespace vShell.Ui
                     Fill = FillBrush(),
                     Track = T.Track,
                     GraphW = Cfg.ShownGraphWidth,
-                    GraphH = Math.Max(6, Bar.HostHeight * Cfg.GraphHeightPercent / 100.0),
+                    GraphH = Math.Max(6, Bar.HostHeight * Cfg.ShownGraphHeightPercent / 100.0),
                     Margin = new Thickness(8, 0, 0, 0),
                     VerticalAlignment = VerticalAlignment.Center
                 };

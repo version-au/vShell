@@ -184,7 +184,7 @@ namespace vShell.Ui
             if (Gauge)
             {
                 if (_gauge == null) _gauge = new GaugeFace(_hist, _hist2);
-                _gauge.Setup(GraphStyle, Bar, t, t.Resolve(Cfg.Color, t.MainAccent), Cfg.WarnOn ? Math.Max(0, Math.Min(100, Cfg.WarnAt)) : -1, Cfg.WarnBelow, TileMeter, Cfg.GraphHeightPercent, Cfg.ShowText, Cfg.ShownTileWidth,
+                _gauge.Setup(GraphStyle, Bar, t, t.Resolve(Cfg.Color, t.MainAccent), Cfg.WarnOn ? Math.Max(0, Math.Min(100, Cfg.WarnAt)) : -1, Cfg.WarnBelow, TileMeter, Cfg.ShownGraphHeightPercent, Cfg.ShowText, Cfg.ShownTileWidth,
                               Cfg.WarnOn ? Theme.WarnFade : 0, t.Warn(Cfg.WarnColor));
                 _gauge.Fill2 = t.Resolve(Cfg.Color2, t.SecondaryAccent);     // the second series (network upload), as in the Text styles' graph
                 _gauge.Look(Cfg, t);
@@ -224,7 +224,7 @@ namespace vShell.Ui
             _view.ApplyLook(Cfg, t);
             _view.GraphStyle = GraphStyle;
             _view.GraphW = Cfg.ShownGraphWidth;
-            _view.GraphH = Math.Max(6, Bar.HostHeight * Cfg.GraphHeightPercent / 100.0);
+            _view.GraphH = Math.Max(6, Bar.HostHeight * Cfg.ShownGraphHeightPercent / 100.0);
             _view.InvalidateMeasure();
             OnThemed(t);
         }

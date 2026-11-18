@@ -690,7 +690,7 @@ namespace vShell.Ui
             if (Gauge)
             {
                 if (_gauge == null) _gauge = new GaugeFace(_hist);
-                _gauge.Setup(_cfg.Style, _bar, t, t.Resolve(_cfg.Color, t.MainAccent), _cfg.WarnOn ? Math.Max(0, Math.Min(100, _cfg.WarnAt)) : -1, _cfg.WarnBelow, false, _cfg.GraphHeightPercent, _cfg.ShowText, _cfg.ShownTileWidth,
+                _gauge.Setup(_cfg.Style, _bar, t, t.Resolve(_cfg.Color, t.MainAccent), _cfg.WarnOn ? Math.Max(0, Math.Min(100, _cfg.WarnAt)) : -1, _cfg.WarnBelow, false, _cfg.ShownGraphHeightPercent, _cfg.ShowText, _cfg.ShownTileWidth,
                               _cfg.WarnOn ? Theme.WarnFade : 0, t.Warn(_cfg.WarnColor));
                 _gauge.Look(_cfg, t);
                 Child = _gauge;
@@ -723,7 +723,7 @@ namespace vShell.Ui
             _view.Track = t.Track;
             _view.GraphStyle = _cfg.Style;
             _view.GraphW = _cfg.ShownGraphWidth;
-            _view.GraphH = Math.Max(6, _bar.HostHeight * _cfg.GraphHeightPercent / 100.0);
+            _view.GraphH = Math.Max(6, _bar.HostHeight * _cfg.ShownGraphHeightPercent / 100.0);
             _view.InvalidateMeasure();
 
             // fixed minimum text width so the module does not jiggle as the numbers change

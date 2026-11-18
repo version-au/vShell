@@ -135,7 +135,8 @@ namespace vShell.Core
         public bool ShowDetail { get; set; } = false;
         /// <summary>Width of the graph area in DIPs.</summary>
         public int GraphWidth { get; set; } = 60;
-        /// <summary>Height of bar/line graphs as a percentage of the bar or widget row height (they are centred vertically).</summary>
+        /// <summary>Height of bar/line graphs as a percentage of the bar or widget row height (they are centred vertically); 0 = automatic
+        /// (0.38.233, as the Fans plugin's) - ShownGraphHeightPercent is what's drawn.</summary>
         public int GraphHeightPercent { get; set; } = 60;
         /// <summary>Colour: "#AARRGGBB", or a theme slot "@main" / "@secondary" / "@text" that follows the theme. Empty = the module's default.</summary>
         [PluginApi] public string Color { get; set; } = "";
@@ -311,6 +312,8 @@ namespace vShell.Core
         /// <summary>How long the graph is drawn now: 1 = as set, less when a full bar needs the room.</summary>
         [PluginApi] [JsonIgnore] public double ShownGraphScale { get; set; } = 1;
         [JsonIgnore] public int ShownGraphWidth { get { return Math.Max(16, (int)Math.Round(GraphWidth * ShownGraphScale)); } }
+        /// <summary>The graph height drawn: Graph height, or with 0 (automatic) the style's own - a ring 86 %, the rest 60 % (the defaults).</summary>
+        [JsonIgnore] public int ShownGraphHeightPercent { get { return GraphHeightPercent > 0 ? GraphHeightPercent : Style == "Ring" ? 86 : 60; } }
         [JsonIgnore] public double ShownTileWidth { get { return TileWidth <= 0 ? 0 : Math.Max(40, Math.Round(TileWidth * ShownGraphScale)); } }
         [PluginApi] [JsonIgnore] public bool ShownLines2 { get { return ShownTwoLines ?? TwoLines; } }
         [JsonIgnore] public bool ShownTempLine2 { get { return ShownTwoLines ?? TempOnSecondLine; } }
@@ -683,7 +686,7 @@ namespace vShell.Core
             if (Zone == null || (Zone.Length > 0 && Array.IndexOf(ModuleTypes.Zones, Zone) < 0)) Zone = "";
             GraphWidth = Clamp(GraphWidth, 20, 600);
             if (TextSize != "S" && TextSize != "M" && TextSize != "L") TextSize = "";
-            GraphHeightPercent = Clamp(GraphHeightPercent, 20, 100);
+            GraphHeightPercent = GraphHeightPercent <= 0 ? 0 : Clamp(GraphHeightPercent, 20, 100);     // 0 = automatic
             if (Array.IndexOf(ModuleTypes.GraphLines, GraphLine) < 0) GraphLine = "Normal";
             if (Array.IndexOf(ModuleTypes.GraphFills, GraphFill) < 0) GraphFill = "Light";
             GraphRadius = Clamp(GraphRadius, 0, 12);

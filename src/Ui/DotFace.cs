@@ -65,7 +65,7 @@ namespace vShell.Ui
             _dotNumbers = cfg.Bag.Get("dots.numbers", true);
             _showLabel = cfg.ShowText;
             _graphW = Math.Max(20, cfg.ShownGraphWidth);
-            _heightPercent = Math.Max(20, Math.Min(100, cfg.GraphHeightPercent));
+            _heightPercent = Math.Max(20, Math.Min(100, cfg.ShownGraphHeightPercent));
             _span = Math.Max(60, Math.Min(History.Capacity, cfg.GraphSpan));
             _keepNumW = 0;
             _keepExtraW = 0; _keepColW = 0; _keepColW2 = 0; _keepAfterW = 0;

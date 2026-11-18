@@ -3496,3 +3496,8 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 ## 0.38.232 - Fans 1.2.1: Under the graph's new layout
 1. A bar's Fans module, a graph style, Speed = Under the graph: each fan is the turning fan with '1,240' under it (centred), then the graph with the fan's name under it in small type. One fan shown: the fan over '1,240 rpm', then the graph over its name (or the module's text in front).
 2. The fan icon shrinks to leave room for the speed in a slim bar (28 px); both lines inside the bar at 28 and 40 px. A stopped fan: its speed and name the warning colour.
+## 0.38.233 - Graph height 0 = automatic
+1. A bar's CPU module (Line, then Bars, Meter, Dots): 'Graph height (%, 0 = automatic)' slides down to 0; under 20 snaps to 0. At 0 the graph is 60 % of the bar (as the default); Dots: its 4 rows the same; a widget Dots tile: 7 rows.
+2. Memory, GPU, disk, network, battery, HWiNFO sensor, and a plugin module on vShell's InfoModule / TilesModule (Downloads, Claude usage's meters): the same.
+3. Graph height 0, then Style = Ring: the ring is 86 % (its default); Ring size still 20-100. Back to Line: automatic again.
+4. A settings.json with GraphHeightPercent 0 loads as automatic (not raised to 20); 5 still becomes 20.

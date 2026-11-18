@@ -653,7 +653,8 @@ namespace vShell.Ui
             else
             {
                 SliderRow(p, "Graph length", 20, 600, delegate { return cfg.GraphWidth; }, delegate (double v) { cfg.GraphWidth = (int)v; });
-                SliderRow(p, "Graph height (%)", 20, 100, delegate { return cfg.GraphHeightPercent; }, delegate (double v) { cfg.GraphHeightPercent = (int)v; });
+                // 0 = automatic (the style's own height), as the Fans plugin's; under 20 snaps to it (0.38.233)
+                SliderRow(p, "Graph height (%, 0 = automatic)", 0, 100, delegate { return cfg.GraphHeightPercent; }, delegate (double v) { cfg.GraphHeightPercent = v < 20 ? 0 : (int)v; });
             }
             GraphLookRows(p, cfg);
             if (cfg.Type == ModuleTypes.Network || cfg.Type == ModuleTypes.Downloads)
