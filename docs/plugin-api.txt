@@ -1,4 +1,4 @@
-# vShell plugin API 2 (vShell 0.38.229)
+# vShell plugin API 2 (vShell 0.38.230)
 BarInfo (class)
 BarInfo :: Brush Outline { get; }
 BarInfo :: IntPtr Handle { get; }

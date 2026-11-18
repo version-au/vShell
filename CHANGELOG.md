@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.230
+## 0.38.230 · pre-release
 
 - Dots: Temperature in dots is only offered where there's a temperature - CPU, memory, GPU and HWiNFO sensors (a module that had it set shows Stacked).
 - Dots, Taking turns: every turn looks like the number - the value in dots and its unit in the font (network's upload was plain text).
