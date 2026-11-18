@@ -596,7 +596,8 @@ namespace vShell.Ui
             if (cfg.Style == "Dots")
             {
                 Note(p, "Dots: the readings as columns of dots on a dim dot field, the newest in the graph colour, with a small grey label. In a bar it's one " +
-                        "row; in a widget it's a tile - the label, a big number and the dot graph filling the rest (taller widgets get more rows)." +
+                        "row; in a widget it's a tile - the label, a big number and the dot graph under them. Graph height sets how tall the dots are " +
+                        "in a bar, and how many rows a tile has (100% = 12 rows); Graph length how wide it is." +
                         (cfg.Type == ModuleTypes.Network || cfg.Type == ModuleTypes.Downloads ? " Download rises above the middle line, upload hangs below it (in the upload colour)."
                          : cfg.Type == ModuleTypes.Disk ? " Disk space: the dots fill up from the left as the drive does (Activity keeps a history)." : ""));
                 Check(p, "Numbers in dots", delegate { return cfg.Bag.Get("dots.numbers", true); }, delegate (bool v) { cfg.Bag.Set("dots.numbers", v); },

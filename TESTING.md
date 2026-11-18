@@ -3473,3 +3473,4 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 4. A widget tile whose detail doesn't fit beside the label: on its own line under the label (the tile a little taller).
 5. Colour by load on (CPU, Dots): in a bar and a widget every lit dot takes the colour of its height - the newest column too (it turns the warning colour past the warning level). Disk space, Dots + Colour by load: the fill goes from the low to the high colour left to right.
 6. Plugin API: docs\plugin-api.txt gains 'DotFace :: string Temp { set; }' only. Plugins with a MetricView Dots graph (Fans, Home Assistant, Proxmox) and colour by load: the newest column by load too.
+7. A widget's CPU module, Dots: Graph height 20-30 % - 3-4 rows of dots, the tile shorter; 60 % (default) - 7 rows; 100 % - 12 rows, the tile taller. Network: an even number of rows (half each side). Disk space: at most 4 rows. A widget with a tall module row: the dots sit at the tile's bottom.

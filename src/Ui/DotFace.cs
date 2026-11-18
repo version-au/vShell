@@ -167,6 +167,18 @@ namespace vShell.Ui
         int BarRows { get { return Two ? 6 : 4; } }
         double BarCell { get { return Math.Max(2, HostH * _heightPercent / 100.0 / BarRows); } }
         double TileCell { get { return Math.Max(4, Math.Round(Fs * 0.6 * 2) / 2); } }
+        /// <summary>A tile's dot rows from Graph height: 100 % = 12 rows, 60 % (the default) = 7, at least 3 - an even number for two series;
+        /// a meter (disk space) at most 4, a band. (Before 0.38.228 a tile took as many rows as fitted and Graph height did nothing.)</summary>
+        int TileRows
+        {
+            get
+            {
+                int rows = Math.Max(3, Math.Min(12, (int)Math.Round(_heightPercent / 100.0 * 12)));
+                if (Two) rows = Math.Max(4, rows + rows % 2);
+                if (_meter) rows = Math.Min(rows, 4);
+                return rows;
+            }
+        }
         const double Pad = 8;
 
         protected override Size MeasureOverride(Size available)
@@ -177,7 +189,7 @@ namespace vShell.Ui
                 // label line, the number, then at least 4 rows of dots; as tall as the module row asks for at least. As wide as Graph length
                 // asks - never what the widget offers (a widget that sizes itself to its content offers its whole room); a wider widget
                 // still stretches it (HorizontalAlignment)
-                double h = Pad + LabelSize * 1.4 + 6 + NumCell * 7 + 8 + TileCell * 4 + Pad;
+                double h = Pad + LabelSize * 1.4 + 6 + NumCell * 7 + 8 + TileCell * TileRows + Pad;
                 double w = Math.Max(_graphW, 120) + Pad * 2;
                 if (!double.IsInfinity(available.Width)) w = Math.Min(w, available.Width);
                 // the detail / temperature on a line of its own when it doesn't fit beside the label
@@ -250,11 +262,11 @@ namespace vShell.Ui
             double nc = NumCell;
             DrawNumber(dc, Pad, y, nc);
             y += nc * 7 + 8;
-            // the graph fills the rest: as many rows as fit (at least 3; an even number for two series), as many columns as the width takes
+            // the graph along the bottom: Graph height's rows (fewer only if the tile is squeezed), as many columns as the width takes
             double cell = TileCell;
-            int rows = Math.Max(3, Math.Min(12, (int)Math.Floor((h - Pad - y) / cell)));
-            if (Two) rows = Math.Max(4, rows - rows % 2);
-            if (_meter) rows = Math.Min(rows, 4);     // a fill reads best as a band, not a block (the mock-up's 20 x 4)
+            int rows = TileRows;
+            int fit = (int)Math.Floor((h - Pad - y) / cell);
+            if (fit < rows) rows = Math.Max(Two ? 2 : 1, Two ? fit - fit % 2 : fit);
             int cols = Columns(w - Pad * 2, cell);
             double left = Pad + ((w - Pad * 2) - cols * cell) / 2;
             DrawField(dc, left, h - Pad - rows * cell, cols, rows, cell);
