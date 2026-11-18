@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.227
+## 0.38.227 · pre-release
 
 - Memory, GPU, disk, network, battery, HWiNFO sensor and Downloads modules have the Dots style too: network mirrors download and upload round a middle line, disk space fills up from the left.
 - The CPU module's Dots tile in a widget no longer starts very wide: Graph length sets its width.
