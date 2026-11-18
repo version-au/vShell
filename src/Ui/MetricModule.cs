@@ -334,17 +334,22 @@ namespace vShell.Ui
                 return;
             }
             bool two = Data2 != null && Data2.Count > 0 && Value2 >= 0;
-            // dots of one size (about a quarter of the graph, at least 2.5 px and at most 5 px): a taller graph gets more rows of them, not
-            // bigger dots (0.38.233) - an even number of rows for two series
-            int rows = Math.Max(two ? 2 : 1, (int)Math.Round(h / Math.Max(2.5, Math.Min(5, h / 4))));
+            // dots of one size: in a bar or widget the size vShell's own Dots modules use there (60 % of its height in 4 rows - DotFace), so a
+            // plugin's dot graph beside the CPU module has the same dots (0.38.236: from the graph's own height, capped at 5 px, they came out
+            // smaller in a bar taller than 32 px); elsewhere (a popup) about a quarter of the graph, 2.5 to 5 px. A taller graph gets more
+            // rows of them, not bigger dots - an even number for two series
+            var host = Window.GetWindow(this) as IModuleHost;
+            double target = host != null ? Math.Max(2, Math.Max(16, host.HostHeight) * 0.6 / (two ? 6 : 4)) : Math.Max(2.5, Math.Min(5, h / 4));
+            int rows = Math.Max(two ? 2 : 1, (int)Math.Round(h / target));
             if (two && rows % 2 == 1) rows++;
-            double cell = h / rows;
+            double cell = Math.Min(target, h / rows);
             int cols = Math.Max(3, (int)Math.Floor(w / cell));
             int bucket = BarBucket(cols, Span);
             // the columns spread over the whole width, so the graph's left and right edges are exactly where it is (text placed under
             // its left edge lines up - the Fans plugin's Under the graph); each dot round, in the smaller of its cell's sides
             double cw = w / cols;
-            Action<double, double, Brush> put = delegate (double cx, double cy, Brush b) { DotIn(dc, cx, cy, cw, cell, b); };
+            double y0 = (h - rows * cell) / 2;      // the rows centred in the graph's height
+            Action<double, double, Brush> put = delegate (double cx, double cy, Brush b) { DotIn(dc, cx, y0 + cy, cw, cell, b); };
             Brush ink = Ink ?? Fill;
             Func<History, int, double> at = delegate (History d, int c)
             {
