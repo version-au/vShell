@@ -13,7 +13,7 @@
     <StartupObject>vShell.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>vshell.ico</ApplicationIcon>
-    <Version>0.38.226</Version>
+    <Version>0.38.227</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 

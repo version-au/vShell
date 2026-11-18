@@ -93,8 +93,10 @@ namespace vShell.Ui
             {
                 // label line, the number, then at least 4 rows of dots; as tall as the module row asks for at least
                 double h = Pad + LabelSize * 1.4 + 6 + NumCell * 7 + 8 + WidgetCell * 4 + Pad;
-                double w = Math.Max(_graphW, 120);
-                if (!double.IsInfinity(available.Width)) w = Math.Max(w, available.Width);
+                // as wide as Graph length asks (never what the widget offers: a widget that sizes itself to its content offers its
+                // whole room, and the tile took all of it - 0.38.226); a wider widget still stretches it (HorizontalAlignment)
+                double w = Math.Max(_graphW, 120) + Pad * 2;
+                if (!double.IsInfinity(available.Width)) w = Math.Min(w, available.Width);
                 return new Size(w, Math.Max(h, HostH));
             }
             double width = 0;

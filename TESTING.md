@@ -3451,3 +3451,6 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 3. A widget's CPU module set to Dots: a tile - "CPU" top left (the clock speed / temperature on the right when Show clock speed / temperature are on), a big dot number, and the dot graph filling the rest; make the widget taller: more rows (up to 12). Its width follows the widget.
 4. Time shown 5 / 15 minutes: each column averages a few seconds. Warning on (e.g. 80 %): past it the number and the newest column turn the warning colour, and columns past it too. Colour by load: lit dots coloured by their height.
 5. Light and dark themes: empty dots stay faint on both. Hide the widget behind a window (0.38.224): it stops drawing and catches up when it shows again.
+## 0.38.227 - the Dots tile's width in a widget
+1. A widget that sizes itself to its content, its CPU module set to Dots: the tile is about Graph length wide (at least 136 px), not stretched across the screen. Move the Graph length slider: the tile gets wider / narrower.
+2. A widget with a fixed width wider than that: the tile still fills it.
