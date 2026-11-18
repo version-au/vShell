@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.1.0 (2026-11-18)
+- Meter style Dots: a row of dots filling up as the limit is used (needs vShell 0.38.227 - an older vShell draws the bar).
+
 ## 2.0.2 (2026-11-01)
 - Author shown as "version" (was "V"). No other changes.
 

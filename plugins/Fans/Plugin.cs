@@ -239,7 +239,8 @@ namespace VShellFans
                     p.Note("Fan only: the turning fan and the fastest speed - or which fan stopped, in the warning colour. Click for every fan in a popup.");
                     break;
                 default:
-                    p.Note(style + ": by each fan its turning fan, its name, the graph and the speed." + (widget ? "" : " Click for every fan in a popup."));
+                    p.Note(style + ": by each fan its turning fan, its name, the graph and the speed." + (widget ? "" : " Click for every fan in a popup.") +
+                           (style == "Dots" ? " Dots: the speed over time as columns of dots, the newest in the graph colour (needs vShell 0.38.227)." : ""));
                     p.Slider("Graph length (0 = automatic)", 0, 300, delegate { return v.GraphLen; }, delegate (double d) { v.GraphLen = (int)Math.Round(d); p.Changed(); });
                     p.Slider("Graph height (% of " + of + ", 0 = automatic)", 0, 100, delegate { return v.GraphHeight; }, delegate (double d) { v.GraphHeight = (int)Math.Round(d); p.Changed(); });
                     p.Note(widget ? "Automatic: the graph takes the room left in the row, 60 % of its height (a meter: a thin bar)."

@@ -26,6 +26,17 @@ BarSettings :: T IntegrationValue<1>(string, string, T)
 BarSettings :: WidgetStyle WidgetStyle { get; set; }
 BarSettings :: bool UsesModule(string)
 BarSettings :: static string ConfigDir { get; }
+DotFace (class : FrameworkElement)
+DotFace :: double FullScale { set; }
+DotFace :: new(History, History?)
+DotFace :: protected virtual Size MeasureOverride(Size)
+DotFace :: protected virtual void OnRender(DrawingContext)
+DotFace :: void Setup(ModuleConfig, IModuleHost, Theme, bool, double?, bool?)
+DotFace :: void Show(string, string, string, string, bool, double?, double?)
+DotText (static class)
+DotText :: static bool CanDraw(string)
+DotText :: static double Draw(DrawingContext, string, double, double, double, Brush)
+DotText :: static double Width(string, double)
 DownDelay (static class)
 DownDelay :: static UpResult Up(string)
 DownDelay :: static bool IsDown(string)

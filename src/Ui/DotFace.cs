@@ -15,7 +15,13 @@ namespace vShell.Ui
     /// In a bar: label, dot graph and number in one row. As a tile (a widget, for modules that can be taller than a row): label (and
     /// the detail on the right), the big number, and the dot graph filling the rest of the module.
     /// </summary>
-    internal sealed class DotFace : FrameworkElement
+    /// <remarks>
+    /// Plugin API since vShell 0.38.227: a plugin's module can show itself the same way - new DotFace(history[, history2]), Setup from its
+    /// ModuleConfig / host / theme (again when they change), Show with each reading. Only the graph (no label or number): MetricView with
+    /// GraphStyle "Dots". Numbers alone: DotText.
+    /// </remarks>
+    [PluginApi]
+    public sealed class DotFace : FrameworkElement
     {
         readonly History _data, _data2;
         Theme _t;
@@ -363,8 +369,9 @@ namespace vShell.Ui
         static SolidColorBrush Frozen(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
     }
 
-    /// <summary>Numbers drawn in dots: 5 x 7 shapes for the digits and the few signs and unit letters readings use.</summary>
-    internal static class DotText
+    /// <summary>Numbers drawn in dots: 5 x 7 shapes for the digits and the few signs and unit letters readings use (plugin API since 0.38.227).</summary>
+    [PluginApi]
+    public static class DotText
     {
         static readonly Dictionary<char, string[]> Glyphs = new Dictionary<char, string[]>
         {

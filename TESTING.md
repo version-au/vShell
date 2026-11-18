@@ -3460,3 +3460,9 @@ vSuite's TermLink pipe (vSuite.Core 1.0.20).
 6. Battery (a laptop), Dots: BAT, the percentage, and in a tile charging / on battery and the time left.
 7. HWiNFO sensor, Dots: the title as the label, the number in dots with its unit (°C in dots, RPM / W / MHz in the font), the graph over the graph range; the warning level in the sensor's unit.
 8. Downloads plugin (not rebuilt), Dots: works in a bar, and in a widget it's a tile like the others. Volume has no Dots (Text / Meter only).
+9. Plugin API: docs\plugin-api.txt gains DotFace, DotText (11 lines, nothing else changed); build.cmd's check passes. docs\plugins.md > Modules has the Dots part.
+10. Fans 1.1.0: Style = Dots (bar and widget): by each fan the speed as dot columns, the newest in the graph colour; Graph length / height size it; a stopped fan's newest column in the warning colour.
+11. Home Assistant: an entity's Graph next to the value = Dots: its history in dots. Proxmox: Style = Dots - CPU / RAM / storage as rows of dots filling up (stretching with the module).
+12. Claude usage 2.1.0: Meter style = Dots - each limit a row of dots filling up (amber / red past its warning). PeaNUT 2.1.0: Battery meter on, Meter style = Dots - dots filling with the charge (red under 25 %).
+13. Those plugins on vShell 0.38.226 or older: Dots draws a plain meter (no error).
+14. Settings > About > Plugin SDK > Download: Include pre-releases on (and the pre-release newer than the release) - https://vsuite.vrsion.com/vshell/pre/sdk.zip, its plugin-api.txt says vShell 0.38.227 and lists DotFace / DotText; off (or the update site not answering) - vshell/sdk.zip, the release's.

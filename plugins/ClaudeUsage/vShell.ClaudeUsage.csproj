@@ -5,7 +5,7 @@
     <AssemblyName>vShell.ClaudeUsage</AssemblyName>
     <RootNamespace>ClaudeUsage</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Version>2.0.2</Version>
+    <Version>2.1.0</Version>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>

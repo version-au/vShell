@@ -1,5 +1,8 @@
 # Changelog - PeaNUT for vShell
 
+## 2.1.0
+- Meter style (with the battery meter on): Bar or Dots - a row of dots filling with the charge (needs vShell 0.38.227 - an older vShell draws the bar).
+
 ## 2.0.2
 - Author shown as "version" (was "V"). No other changes.
 

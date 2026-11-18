@@ -19,8 +19,8 @@ namespace VShellFans
 
         /// <summary>The styles, as the CPU module's Style: Tile (as the Tile style), a graph by each fan (Line, Bars, Meter, Ring), or on a
         /// bar just the fan (the fastest speed; a click for the list).</summary>
-        public static readonly string[] WidgetStyles = { "Tile", "Line", "Bars", "Meter", "Ring" };
-        public static readonly string[] BarStyles = { "Tile", "Line", "Bars", "Meter", "Ring", "Fan only" };
+        public static readonly string[] WidgetStyles = { "Tile", "Line", "Bars", "Meter", "Ring", "Dots" };
+        public static readonly string[] BarStyles = { "Tile", "Line", "Bars", "Meter", "Ring", "Dots", "Fan only" };
         public const string FanOnly = "Fan only";
 
         /// <summary>The style (widget or bar); from 1.0.2's layouts the first time.</summary>

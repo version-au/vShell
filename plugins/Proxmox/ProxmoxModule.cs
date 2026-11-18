@@ -136,6 +136,16 @@ namespace vShell.Ui
         FrameworkElement Meter(double fraction, Brush fill, double height, double minWidth)
         {
             fraction = Math.Max(0, Math.Min(1, double.IsNaN(fraction) ? 0 : fraction));
+            if (View.Style == "Dots")
+            {
+                // a row of dots filling up (vShell's dot meter; stretches as the bar does)
+                double dh = Math.Max(5, Math.Round(height * 1.3));
+                return new MetricView
+                {
+                    GraphStyle = "Dots", Value = fraction * 100, Fill = fill, Track = _t.Track, GraphW = minWidth, GraphH = dh,
+                    HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center, MinWidth = minWidth
+                };
+            }
             var g = new Grid { Height = height, MinWidth = minWidth, VerticalAlignment = VerticalAlignment.Center };
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0.0001, fraction), GridUnitType.Star) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(0.0001, 1 - fraction), GridUnitType.Star) });
@@ -184,7 +194,7 @@ namespace vShell.Ui
             if (!string.IsNullOrEmpty(_cfg.Title)) row.Children.Add(T(_cfg.Title + " ", _t.FgDim));
             string p = Problem(s);
             if (p != null) { row.Children.Add(T(p, _t.FgDim)); return row; }
-            bool meter = View.Style == "Meter";
+            bool meter = View.Style != "Text";
             double h = Math.Max(3, Math.Round(_bar.HostHeight * 0.13));
             switch (View.Show)
             {
@@ -287,7 +297,7 @@ namespace vShell.Ui
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            bool meter = detail || View.Style == "Meter";
+            bool meter = detail || View.Style != "Text";
             double h = Math.Max(4, Math.Round(_t.FontSize * 0.45));
             List<PveResource> nodes = s.Nodes(detail ? "" : View.Node);
             if (nodes.Count == 0) return T("No nodes (does the token have the PVEAuditor role?)", _t.FgDim);
@@ -384,7 +394,7 @@ namespace vShell.Ui
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             double h = Math.Max(4, Math.Round(_t.FontSize * 0.45));
             bool manyNodes = s.Nodes("").Count > 1 && (detail || View.Node.Length == 0);
-            bool meter = detail || View.Style == "Meter";
+            bool meter = detail || View.Style != "Text";
             List<PveResource> pools = s.Storage(detail ? "" : View.Node);
             if (pools.Count == 0) return T("No storage", _t.FgDim);
             string lastGroup = null;

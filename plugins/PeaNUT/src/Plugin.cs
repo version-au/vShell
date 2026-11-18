@@ -316,7 +316,10 @@ namespace VShellPeanut
                 p.Redraw();
             });
             if (cfg.Bag.Get(UpsModule.KeyMeter, false))
+            {
+                p.Combo("Meter style", new[] { "Bar", "Dots" }, () => cfg.Bag.Get(UpsModule.KeyMeterStyle, "Bar"), v => cfg.Bag.Set(UpsModule.KeyMeterStyle, v));
                 p.Color("Meter colour", () => cfg.Color, v => cfg.Color = v, true, false);
+            }
             p.Title(cfg, "");
             p.Note("Green = on mains, yellow = on battery (or its battery wants replacing), red = battery low, overloaded or PeaNUT " +
                    "can't be reached, grey = no reading yet. Hover for the readings; click for everything. " +

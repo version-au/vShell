@@ -42,7 +42,7 @@ namespace vShell.Core
     public sealed class PvView
     {
         public static readonly string[] Shows = { "Nodes", "Guests", "Storage" };
-        public static readonly string[] Styles = { "Text", "Meter" };
+        public static readonly string[] Styles = { "Text", "Meter", "Dots" };
 
         readonly SettingsBag _b;
         public PvView(ModuleConfig cfg) { _b = cfg.Bag; }
@@ -52,7 +52,7 @@ namespace vShell.Core
         public string Show { get { string v = _b.Get("Show", "Nodes"); return Array.IndexOf(Shows, v) < 0 ? "Nodes" : v; } set { _b.Set("Show", value); } }
         /// <summary>Only this node ("" = the whole cluster).</summary>
         public string Node { get { return _b.Get("Node", ""); } set { _b.Set("Node", value ?? ""); } }
-        /// <summary>"Text" (percentages) or "Meter" (small bars) for nodes and storage.</summary>
+        /// <summary>"Text" (percentages), "Meter" (small bars) or "Dots" (rows of dots - vShell 0.38.227) for nodes and storage.</summary>
         public string Style { get { string v = _b.Get("Style", "Meter"); return Array.IndexOf(Styles, v) < 0 ? "Meter" : v; } set { _b.Set("Style", value); } }
         public bool RunningOnly { get { return _b.Get("RunningOnly", false); } set { _b.Set("RunningOnly", value); } }
         public bool ShowTemplates { get { return _b.Get("ShowTemplates", false); } set { _b.Set("ShowTemplates", value); } }

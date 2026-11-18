@@ -7,6 +7,9 @@ Newest first. The heading must start with `## ` and the version number exactly a
 
 - Memory, GPU, disk, network, battery, HWiNFO sensor and Downloads modules have the Dots style too: network mirrors download and upload round a middle line, disk space fills up from the left.
 - The CPU module's Dots tile in a widget no longer starts very wide: Graph length sets its width.
+- Plugins can draw in dots too (plugin API: MetricView's Dots style, DotFace, DotText).
+- Settings > About > Plugin SDK downloads the newest pre-release's SDK when Include pre-releases is on and it's newer than the release.
+- Dots in the plugins: Fans 1.1.0 (a graph style), Home Assistant (an entity's graph), Proxmox (CPU, memory and storage), Claude usage 2.1.0 and PeaNUT 2.1.0 (their meters).
 
 ## 0.38.226 · pre-release
 

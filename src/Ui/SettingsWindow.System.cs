@@ -287,10 +287,24 @@ namespace vShell.Ui
                 try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(BarSettings.LogPath) { UseShellExecute = true }); }
                 catch (Exception ex) { Log.Write("Open log: " + ex.Message); }
             })));
-            Place(root, Row("Plugin SDK - create your own plugin", Btn("Download", delegate
+            Place(root, Row("Plugin SDK - create your own plugin", Btn("Download", async delegate
             {
-                // vShell.dll + plugin-api.txt + plugins.md of the newest release, on the update site (build.cmd puts it there)
-                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(vSuite.App.UpdateSite + "/vshell/sdk.zip") { UseShellExecute = true }); }
+                // vShell.dll + plugin-api.txt + plugins.md, beside each release on the update site (build.cmd puts it there). With
+                // Include pre-releases on: the newest of the release and the pre-release (vshell/pre/sdk.zip when that's newer) - before
+                // 0.38.227 it was always the release's, so a pre-release's new plugin API couldn't be downloaded
+                string sdk = vSuite.App.UpdateSite + "/vshell/sdk.zip";
+                if (S.UpdatePre)
+                {
+                    try
+                    {
+                        UpdateInfo newest = null;
+                        foreach (UpdateInfo u in await vSuite.Updater.ReleasesAsync("vShell", true))
+                            if (newest == null || u.Version > newest.Version) newest = u;
+                        if (newest != null && !string.IsNullOrEmpty(newest.Folder)) sdk = newest.Folder.TrimEnd('/') + "/sdk.zip";
+                    }
+                    catch (Exception ex) { Log.Write("Plugin SDK: the update site didn't answer (" + ex.Message + ") - the release's SDK"); }
+                }
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sdk) { UseShellExecute = true }); }
                 catch (Exception ex) { Log.Write("Plugin SDK: " + ex.Message); }
             })));
         }

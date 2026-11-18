@@ -68,6 +68,8 @@ namespace ClaudeUsage
         bool ShowReset { get { return B.Get("ShowReset", false); } }
         bool ShowMeter { get { return B.Get("ShowMeter", true); } }
         bool Ring { get { return B.Get("MeterStyle", "Bar") == "Ring"; } }
+        /// <summary>A row of dots filling up (vShell 0.38.227's dot meter; an older vShell draws its plain bar).</summary>
+        bool Dots { get { return B.Get("MeterStyle", "Bar") == "Dots"; } }
         double WarnAt { get { return B.Get("WarnAt", 80.0); } }
         double MeterScale { get { return Math.Max(0.5, Math.Min(3, B.Get("MeterSize", 100.0) / 100)); } }
         string FrontText { get { return (Cfg.Title ?? "").Trim(); } }
@@ -90,7 +92,7 @@ namespace ClaudeUsage
         {
             var parts = new List<string>();
             foreach (Limit l in list) parts.Add(l.Key);
-            return string.Join(",", parts) + "|" + ShowMeter + "|" + Ring + "|" + MeterScale + "|" + FrontText;
+            return string.Join(",", parts) + "|" + ShowMeter + "|" + Ring + "|" + Dots + "|" + MeterScale + "|" + FrontText;
         }
 
         protected override void BuildTiles()
@@ -123,6 +125,7 @@ namespace ClaudeUsage
                 }
                 else
                 {
+                    if (Dots) t.Meter.GraphStyle = "Dots";
                     t.Meter.GraphW = Math.Round(t.Meter.GraphW * scale);
                     t.Meter.GraphH = Math.Min(Bar.HostHeight, Math.Round(t.Meter.GraphH * scale));
                 }
@@ -375,7 +378,7 @@ namespace ClaudeUsage
             p.Title(cfg, "Claude");
             p.Check("Names (5h, Wk)", delegate { return b.Get("ShowNames", true); }, delegate (bool v) { b.Set("ShowNames", v); });
             p.Check("Meters", delegate { return b.Get("ShowMeter", true); }, delegate (bool v) { b.Set("ShowMeter", v); });
-            p.Combo("Meter style", new[] { "Bar", "Ring" }, delegate { return b.Get("MeterStyle", "Bar"); }, delegate (string v) { b.Set("MeterStyle", v); });
+            p.Combo("Meter style", new[] { "Bar", "Ring", "Dots" }, delegate { return b.Get("MeterStyle", "Bar"); }, delegate (string v) { b.Set("MeterStyle", v); });
             p.Slider("Meter size (%)", 50, 300, delegate { return b.Get("MeterSize", 100.0); }, delegate (double v) { b.Set("MeterSize", Math.Round(v / 5) * 5); });
             p.Check("When it resets", delegate { return b.Get("ShowReset", false); }, delegate (bool v) { b.Set("ShowReset", v); });
             p.Slider("Amber from (% used)", 50, 99, delegate { return b.Get("WarnAt", 80.0); }, delegate (double v) { b.Set("WarnAt", Math.Round(v)); });

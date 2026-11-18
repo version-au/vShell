@@ -242,7 +242,7 @@ namespace vShell.Ui
                     new FormField("Unit (empty = its own)", r.Unit),
                     new FormField("Decimals (empty = automatic)", r.Decimals < 0 ? "" : r.Decimals.ToString(CultureInfo.InvariantCulture)),
                     FormField.Check("Clicking it operates it (lights, switches, scenes ...)", r.Clickable),
-                    FormField.Combo("Graph next to the value", r.GraphStyle ?? "None", new[] { "None", "Meter", "Bars", "Line" }),
+                    FormField.Combo("Graph next to the value", r.GraphStyle ?? "None", new[] { "None", "Meter", "Bars", "Line", "Dots" }),
                     FormField.Combo("Graph position", r.GraphAlign ?? "Right", new[] { "Left", "Right" }),
                     new FormField("Graph: empty at", r.GraphMin.ToString(CultureInfo.InvariantCulture)),
                     new FormField("Graph: full at", r.GraphMax.ToString(CultureInfo.InvariantCulture)) { Hint = "Numbers are scaled between these two values (for example 0 and 5000 for a power sensor in W). On/off entities draw as full/empty." },

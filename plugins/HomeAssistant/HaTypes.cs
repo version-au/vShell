@@ -24,7 +24,7 @@ namespace vShell.Core
         public int Decimals { get; set; } = -1;
         /// <summary>Clicking the tile toggles / triggers the entity (lights, switches, scenes, scripts, buttons ...).</summary>
         public bool Clickable { get; set; } = true;
-        /// <summary>"None", "Meter", "Bars" or "Line": a small graph drawn next to this entity's value (numeric entities; on/off count as 100/0).</summary>
+        /// <summary>"None", "Meter", "Bars", "Line" or "Dots" (vShell 0.38.227's dot graph): a small graph drawn next to this entity's value (numeric entities; on/off count as 100/0).</summary>
         public string GraphStyle { get; set; } = "None";
         /// <summary>The value that shows as an empty / a full graph.</summary>
         public double GraphMin { get; set; } = 0;

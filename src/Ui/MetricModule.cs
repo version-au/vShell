@@ -79,6 +79,7 @@ namespace vShell.Ui
             ShowBack = cfg.GraphBack;
             Radius = Math.Max(0, cfg.GraphRadius);
             Grid = cfg.GraphGrid;
+            Ink = t.Fg;      // Dots: the lit dots (the newest column stays Fill)
             Color fg = t.Fg.Color;
             var gb = new SolidColorBrush(Color.FromArgb(46, fg.R, fg.G, fg.B));
             gb.Freeze();
@@ -295,8 +296,103 @@ namespace vShell.Ui
                 case "Line": DrawLine(dc, w, h); break;
                 case "Ring": DrawRing(dc, w, h); break;
                 case "Cores": if (Cores.Length > 0) DrawCores(dc, w, h); else DrawMeter(dc, w, h); break;
+                case "Dots": DrawDots(dc, w, h); break;
                 default: DrawMeter(dc, w, h); break;
             }
+        }
+
+        /// <summary>Dots: the lit dots of a history (the newest column is Fill); null = Fill. ApplyLook sets it to the theme's text colour.</summary>
+        internal Brush Ink;
+
+        /// <summary>
+        /// "Dots" (0.38.227 - a plugin's graph gets it by setting GraphStyle = "Dots"): with a history (Data), its columns as dots on a dim dot
+        /// field (Track), the newest column in Fill (the warning colour past the threshold), two series mirrored round the middle (Data2:
+        /// Fill2, down from it); without one, a meter - a row of dots filling with Value (two rows with Value2).
+        /// </summary>
+        void DrawDots(DrawingContext dc, double w, double h)
+        {
+            Brush off = Track ?? Brushes.Gray;
+            double kk = K;
+            if (Data == null || Data.Count == 0)
+            {
+                int mrows = Value2 >= 0 ? 2 : 1;
+                double mc = Math.Max(2, Math.Min(h / mrows, 9));
+                int mcols = Math.Max(3, (int)Math.Floor(w / mc));
+                double my = (h - mrows * mc) / 2;
+                for (int row = 0; row < mrows; row++)
+                {
+                    double v = (row == 0 ? Value : Value2) * kk;
+                    Brush fill = row == 0 ? Fill : Fill2;
+                    int lit = (int)Math.Round(Clamp100(v) / 100.0 * mcols);
+                    if (v > 0 && lit == 0) lit = 1;
+                    for (int c = 0; c < mcols; c++)
+                    {
+                        Brush b = c >= lit ? off : LoadColors != null ? LoadBrushAt((c + 1) * 100.0 / mcols) : FillFor(v, fill);
+                        Dot(dc, c * mc, my + row * mc, mc, b);
+                    }
+                }
+                return;
+            }
+            bool two = Data2 != null && Data2.Count > 0 && Value2 >= 0;
+            // about 4 dots tall (an even number for two series), at least 2.5 px a dot
+            int rows = Math.Max(two ? 2 : 1, (int)Math.Round(h / Math.Max(2.5, h / 4)));
+            if (two && rows % 2 == 1) rows++;
+            double cell = h / rows;
+            int cols = Math.Max(3, (int)Math.Floor(w / cell));
+            int bucket = BarBucket(cols, Span);
+            double x0 = w - cols * cell;
+            Brush ink = Ink ?? Fill;
+            Func<History, int, double> at = delegate (History d, int c)
+            {
+                double avg;
+                int end = d.Count - (cols - 1 - c) * bucket;
+                return end > 0 && Avg(d, end, bucket, out avg) ? Clamp100(avg * kk) : -1;
+            };
+            Func<double, int, int> tall = delegate (double v, int n) { return v < 0 ? 0 : Math.Max(1, (int)Math.Round(v / 100.0 * n)); };
+            if (two)
+            {
+                int half = rows / 2;
+                for (int c = 0; c < cols; c++)
+                {
+                    bool last = c == cols - 1;
+                    double v1 = at(Data, c), v2 = at(Data2, c);
+                    int t1 = tall(v1, half), t2 = tall(v2, half);
+                    for (int row = 0; row < half; row++) Dot(dc, x0 + c * cell, row * cell, cell, half - row <= t1 ? (last ? FillFor(v1, Fill) : ink) : off);
+                    for (int row = 0; row < half; row++) Dot(dc, x0 + c * cell, (half + row) * cell, cell, row < t2 ? (last ? Fill2 : Faint(Fill2)) : off);
+                }
+                return;
+            }
+            for (int c = 0; c < cols; c++)
+            {
+                double v = at(Data, c);
+                int t = tall(v, rows);
+                bool last = c == cols - 1;
+                for (int row = 0; row < rows; row++)
+                {
+                    bool lit = rows - row <= t;
+                    Brush b = !lit ? off
+                            : last ? FillFor(v, Fill)
+                            : LoadColors != null ? LoadBrushAt((rows - row) * 100.0 / rows)
+                            : Warned(v) ? WarnFill
+                            : ink;
+                    Dot(dc, x0 + c * cell, row * cell, cell, b);
+                }
+            }
+        }
+
+        static void Dot(DrawingContext dc, double x, double y, double cell, Brush b)
+        {
+            double r = cell * 0.39;
+            dc.DrawEllipse(b, null, new Point(x + cell / 2, y + cell / 2), r, r);
+        }
+
+        static Brush Faint(Brush b)
+        {
+            var s = b as SolidColorBrush;
+            if (s == null) return b;
+            var f = new SolidColorBrush(Color.FromArgb((byte)(s.Color.A * 0.6), s.Color.R, s.Color.G, s.Color.B));
+            f.Freeze();
+            return f;
         }
 
         /// <summary>A bar per thread, side by side, each filling from the bottom (past the warning in WarnFill).</summary>

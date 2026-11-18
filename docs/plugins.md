@@ -154,6 +154,19 @@ Everything registered here is taken away again by vShell when the plugin is remo
   box, grid, time shown, colour by load). A `MetricView` of your own: call `view.ApplyLook(cfg, theme)` after setting it up, and add the rows to
   the module's settings with `p.GraphLook(cfg)` (all of them, whatever the module's Style). With your own automatic scale, pass the time shown
   (vShell 0.38.140+): `MetricView.ScaleFor(history, null, min, cfg.GraphSpan)`, so the scale covers everything the line shows.
+- Dots (vShell 0.38.227+) - the dot-matrix look of vShell's own Dots style, three ways:
+  - **A graph in dots:** a `MetricView` with `GraphStyle = "Dots"`. With a history (`Data`) it draws columns of dots on a dim dot field
+    (`Track`), the newest in `Fill`, the rest in the theme's text colour (after `ApplyLook`); `Data2` + `Value2 >= 0` mirrors a second series
+    below the middle (`Fill2`). Without a history it's a meter: a row of dots filling with `Value` (two rows with `Value2`). Warning, colour
+    by load and `FullScale` work as in the other styles. On an older vShell it draws a meter, so offering "Dots" is safe.
+  - **A whole module face:** `new DotFace(history, history2 = null)` - `Setup(cfg, host, theme, tile, warnPercent = NaN, meter = false)`
+    (again when the settings or theme change; `tile` = the widget layout, for an `IMultiRow` module asking for 0 rows), then each reading
+    `Show(label, number, unit, detail, warn, percent, percent2)` and, for amounts, `FullScale`. It follows the module's Numbers in dots
+    (`cfg.Bag` "dots.numbers"), Show text (the label), Graph length / height, Time shown and colour by load. An `InfoModule` with
+    `HasGauges` gets this by itself when its Style is "Dots".
+  - **Numbers alone:** `DotText.Draw(dc, text, x, y, cell, brush)` (returns the right edge), `DotText.Width(text, cell)`,
+    `DotText.CanDraw(text)` - digits, `% . , ° - + /` and a few unit letters (K M G B C F H V W Z S); a dot is 0.84 of `cell`, a character
+    7 cells tall.
 - `IMultiRow.RowCount == 0`: it sizes itself in a widget. A text box in a widget calls `WidgetWindow.BeginTyping` / `EndTyping`
   (`ITypingModule`). `WidgetWindow.StyleScrollbars(el)` gives a scroll area of its own the widget's thin scrollbars.
 - `PopupWindow` for a popup. A long list goes in a `ScrollViewer` with `MaxHeight = popup.ContentRoom()` (after `UseWidgetStyle`, if

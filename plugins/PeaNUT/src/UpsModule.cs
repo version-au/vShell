@@ -21,6 +21,7 @@ namespace VShellPeanut
         public const string KeyUps = "Ups";          // "" = every UPS, else UpsReading.Key
         public const string KeyShow = "Show";
         public const string KeyMeter = "Meter";
+        public const string KeyMeterStyle = "MeterStyle";     // "Bar" or "Dots" (vShell 0.38.227's dot meter; an older vShell draws the bar)
 
         readonly List<UpsReading> _shown = new List<UpsReading>();
         string _builtFor = null;
@@ -37,6 +38,7 @@ namespace VShellPeanut
         string Pick => Cfg.Bag.Get(KeyUps, "");
         string Show => Cfg.Bag.Get(KeyShow, "Charge");
         bool WithMeter => Cfg.Bag.Get(KeyMeter, false);
+        bool DotMeter => Cfg.Bag.Get(KeyMeterStyle, "Bar") == "Dots";
 
         List<UpsReading> Wanted()
         {
@@ -53,7 +55,10 @@ namespace VShellPeanut
             _builtFor = Signature(_shown);
             _seen = -1;   // new tiles: fill them in on this Update, whatever the store's version
             foreach (var u in _shown)
-                AddTile(true, WithMeter, TogglePopup);
+            {
+                var t = AddTile(true, WithMeter, TogglePopup);
+                if (t.Meter != null && DotMeter) t.Meter.GraphStyle = "Dots";
+            }
         }
 
         static string Signature(List<UpsReading> list)

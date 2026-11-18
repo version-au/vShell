@@ -6,7 +6,7 @@
     <AssemblyName>vShell.Fans</AssemblyName>
     <RootNamespace>VShellFans</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Version>1.0.11</Version>
+    <Version>1.1.0</Version>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <DebugType>none</DebugType>
