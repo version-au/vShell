@@ -3493,3 +3493,6 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 3. Under the label: every fan side by side - the fan, its name with the speed in small type under it, then the graph; one fan shown - the fan, its name (or the module's text in front) over '1,240 rpm', then the graph. Both lines inside the bar (try a 28 px and a 40 px bar).
 4. Under the graph: the fan, its name, then the graph with the speed under it; the graph a little shorter so both fit (Graph height high: it's capped). One fan: the fan, then the graph over '1,240 rpm'.
 5. A fan that stops: its speed turns the warning colour in every place; the speeds update every second without the module jumping.
+## 0.38.232 - Fans 1.2.1: Under the graph's new layout
+1. A bar's Fans module, a graph style, Speed = Under the graph: each fan is the turning fan with '1,240' under it (centred), then the graph with the fan's name under it in small type. One fan shown: the fan over '1,240 rpm', then the graph over its name (or the module's text in front).
+2. The fan icon shrinks to leave room for the speed in a slim bar (28 px); both lines inside the bar at 28 and 40 px. A stopped fan: its speed and name the warning colour.

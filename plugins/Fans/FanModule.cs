@@ -294,14 +294,9 @@ namespace VShellFans
                 }
                 else if (v.SpeedPlace == "Under the graph")
                 {
-                    b.Icon.Margin = new Thickness(0, 0, 6, 0);
-                    one.Children.Add(b.Icon);
-                    one.Children.Add(b.Name);
-                    FitUnder(b.Graph, hh);
-                    graph.Margin = new Thickness(0);
-                    var col = Stack(graph, SmallSpeed(b, hh));
-                    col.Margin = new Thickness(6, 0, 0, 0);
-                    one.Children.Add(col);
+                    // the turning fan with its speed under it, then the graph with the fan's name under it (V, 1.2.1)
+                    one.Children.Add(FanOverSpeed(b, hh, false));
+                    one.Children.Add(GraphOverName(b, graph, hh, null));
                 }
                 else
                 {
@@ -349,11 +344,10 @@ namespace VShellFans
             }
             else if (v.SpeedPlace == "Under the graph")
             {
-                b.Icon.Margin = new Thickness(0, 0, 7, 0);
-                sp.Children.Add(b.Icon);
-                FitUnder(b.Graph, hh);
-                graph.Margin = new Thickness(0);
-                sp.Children.Add(Stack(graph, SmallSpeed(b, hh, true)));
+                // the turning fan with its speed under it, then the graph with the name (or the module's text in front) under it
+                if (title.Length > 0) sp.Children.Remove(b.Name);
+                sp.Children.Add(FanOverSpeed(b, hh, true));
+                sp.Children.Add(GraphOverName(b, graph, hh, title.Length > 0 ? title : f.Name));
             }
             else
             {
@@ -399,7 +393,37 @@ namespace VShellFans
             return line;
         }
 
-        /// <summary>Under the graph: the graph no taller than leaves room for the speed's line in the bar.</summary>
+        /// <summary>Under the graph: the turning fan, shrunk to leave room, centred over the speed in small type.</summary>
+        FrameworkElement FanOverSpeed(Bits b, double hh, bool unit)
+        {
+            FrameworkElement speed = SmallSpeed(b, hh, unit);
+            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            double icon = Math.Max(8, Math.Min(Math.Round(_fs * 1.15), Math.Floor(hh - 6 - size * 1.3)));
+            b.Icon.Width = b.Icon.Height = icon;
+            b.Icon.Margin = new Thickness(0);
+            var col = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) };
+            b.Icon.HorizontalAlignment = HorizontalAlignment.Center;
+            speed.HorizontalAlignment = HorizontalAlignment.Center;
+            speed.Margin = new Thickness(0, 0, 0, 0);
+            col.Children.Add(b.Icon);
+            col.Children.Add(speed);
+            return col;
+        }
+
+        /// <summary>Under the graph: the graph (shortened to leave room) with the fan's name - or name - under it in small type.</summary>
+        FrameworkElement GraphOverName(Bits b, FrameworkElement graph, double hh, string name)
+        {
+            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            FitUnder(b.Graph, hh);
+            graph.Margin = new Thickness(0);
+            if (name != null) b.Name.Text = name;
+            b.Name.FontSize = size;
+            b.Name.Margin = new Thickness(0);
+            var col = Stack(graph, b.Name);
+            return col;
+        }
+
+        /// <summary>Under the graph: the graph no taller than leaves room for the line under it in the bar.</summary>
         void FitUnder(MetricView g, double hh)
         {
             double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
