@@ -228,7 +228,7 @@ namespace vShell.Ui
         //   Temperature in dots the temperature as a second dot number in the Secondary Accent colour; the detail in the tooltip
         //                      (no temperature: the detail stacked)
         //   Taking turns       the number, the detail and the temperature in turn every 3 s, small dots under it saying which
-        //   Under the graph    a flatter graph (3 rows) with the details in small type under it
+        //   Under the graph    a flatter graph (4 rows, as the Fans plugin's) with the details in small type under it
 
         double SmallSize(double h) { return Math.Max(7, Math.Min(Fs * 0.75, (h - 3) / 2.3)); }
         static bool Has(string s) { return !string.IsNullOrEmpty(s); }
@@ -280,7 +280,7 @@ namespace vShell.Ui
             {
                 var line = Line(det, tmp, small);
                 double lineH = small * 1.25;
-                int rows = Two ? 4 : 3;
+                int rows = 4;     // as the Fans plugin's automatic graph (4 dots high); two series: 2 each side (0.38.233 - was 3)
                 double cell = Math.Max(2, Math.Min(BarCell, (h - lineH - 3) / rows));
                 int cols = Columns(_graphW, cell);
                 double gw = cols * cell, lw = Width(line);

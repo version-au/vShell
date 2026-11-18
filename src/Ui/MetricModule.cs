@@ -340,7 +340,10 @@ namespace vShell.Ui
             double cell = h / rows;
             int cols = Math.Max(3, (int)Math.Floor(w / cell));
             int bucket = BarBucket(cols, Span);
-            double x0 = w - cols * cell;
+            // the columns spread over the whole width, so the graph's left and right edges are exactly where it is (text placed under
+            // its left edge lines up - the Fans plugin's Under the graph); each dot round, in the smaller of its cell's sides
+            double cw = w / cols;
+            Action<double, double, Brush> put = delegate (double cx, double cy, Brush b) { DotIn(dc, cx, cy, cw, cell, b); };
             Brush ink = Ink ?? Fill;
             Func<History, int, double> at = delegate (History d, int c)
             {
@@ -357,8 +360,8 @@ namespace vShell.Ui
                     bool last = c == cols - 1;
                     double v1 = at(Data, c), v2 = at(Data2, c);
                     int t1 = tall(v1, half), t2 = tall(v2, half);
-                    for (int row = 0; row < half; row++) Dot(dc, x0 + c * cell, row * cell, cell, half - row <= t1 ? (last ? FillFor(v1, Fill) : ink) : off);
-                    for (int row = 0; row < half; row++) Dot(dc, x0 + c * cell, (half + row) * cell, cell, row < t2 ? (last ? Fill2 : Faint(Fill2)) : off);
+                    for (int row = 0; row < half; row++) put(c * cw, row * cell, half - row <= t1 ? (last ? FillFor(v1, Fill) : ink) : off);
+                    for (int row = 0; row < half; row++) put(c * cw, (half + row) * cell, row < t2 ? (last ? Fill2 : Faint(Fill2)) : off);
                 }
                 return;
             }
@@ -376,9 +379,16 @@ namespace vShell.Ui
                             : LoadColors != null ? LoadBrushAt((rows - row) * 100.0 / rows)
                             : Warned(v) ? WarnFill
                             : ink;
-                    Dot(dc, x0 + c * cell, row * cell, cell, b);
+                    put(c * cw, row * cell, b);
                 }
             }
+        }
+
+        /// <summary>A round dot centred in a cell cw x ch at x, y (its size from the smaller side).</summary>
+        static void DotIn(DrawingContext dc, double x, double y, double cw, double ch, Brush b)
+        {
+            double r = Math.Min(cw, ch) * 0.39;
+            dc.DrawEllipse(b, null, new Point(x + cw / 2, y + ch / 2), r, r);
         }
 
         static void Dot(DrawingContext dc, double x, double y, double cell, Brush b)

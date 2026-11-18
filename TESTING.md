@@ -3501,3 +3501,5 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 2. Memory, GPU, disk, network, battery, HWiNFO sensor, and a plugin module on vShell's InfoModule / TilesModule (Downloads, Claude usage's meters): the same.
 3. Graph height 0, then Style = Ring: the ring is 86 % (its default); Ring size still 20-100. Back to Line: automatic again.
 4. A settings.json with GraphHeightPercent 0 loads as automatic (not raised to 20); 5 still becomes 20.
+5. A bar's CPU module, Dots, Details in a bar = Under the graph: the graph 4 dots high with the details under it, both inside the bar (28 and 40 px bars).
+6. Fans 1.2.1 on a bar, Dots, Speed = Under the graph: each fan's name starts right under the graph's left edge; the graph's right edge (the newest column) at its end. Line / Bars / Meter the same. Home Assistant / Proxmox dot graphs fill their width too.

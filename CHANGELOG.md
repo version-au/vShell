@@ -6,6 +6,8 @@ Newest first. The heading must start with `## ` and the version number exactly a
 ## 0.38.233
 
 - Graph height can be 0 = automatic on every graph module (CPU, memory, GPU, disk, network, battery, sensors, and plugins built on vShell's modules), as on the Fans module.
+- Dots, Under the graph: the graph is 4 dots high (was 3), as the Fans module's.
+- A dot graph fills its whole width, so text under it (the Fans module's Under the graph) starts exactly under its left edge.
 
 ## 0.38.232 · pre-release
 
