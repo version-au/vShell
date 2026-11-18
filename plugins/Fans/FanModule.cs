@@ -65,6 +65,16 @@ namespace VShellFans
         public bool Animate { get { return _b.Get("Animate", true); } set { _b.Set("Animate", value); } }
         /// <summary>The rpm that fills a graph; 0 = automatic (each fan's own, from what it's shown lately).</summary>
         public int FullScale { get { return Math.Max(0, Math.Min(20000, _b.Get("FullScale", 0))); } set { _b.Set("FullScale", value); } }
+
+        /// <summary>On a bar, with a graph by each fan (Line, Bars, Meter, Dots): where the speed goes (1.2.0).</summary>
+        public static readonly string[] SpeedPlaces = { "After the graph", "Under the label", "Under the graph" };
+        public string SpeedPlace
+        {
+            get { string v = _b.Get("SpeedPlace", SpeedPlaces[0]); return Array.IndexOf(SpeedPlaces, v) < 0 ? SpeedPlaces[0] : v; }
+            set { _b.Set("SpeedPlace", value); }
+        }
+        /// <summary>The styles that have a graph by each fan on a bar - the ones Speed applies to.</summary>
+        public static bool GraphBeside(string style) { return style == "Line" || style == "Bars" || style == "Meter" || style == "Dots"; }
     }
 
     /// <summary>
@@ -134,7 +144,7 @@ namespace VShellFans
             List<Fan> fans = Wanted();
             FanView v = FanView.Of(_cfg);
             string style = v.Style(_host.IsWidget);
-            string sig = style + "|" + v.Across + "|" + v.TileWidth + "|" + v.GraphLen + "|" + v.GraphHeight + "|" + v.RingSize + "|" + _host.HostHeight;
+            string sig = style + "|" + v.Across + "|" + v.TileWidth + "|" + v.GraphLen + "|" + v.GraphHeight + "|" + v.RingSize + "|" + v.SpeedPlace + "|" + _host.HostHeight;
             foreach (Fan f in fans) sig += "\n" + f.Key + "\t" + f.Name;
             if (sig != _built) { _built = sig; Build(fans); }
             bool moving = Animate && !ModuleVisibility.Covered(_host);
@@ -274,6 +284,25 @@ namespace VShellFans
                     b.Num.Margin = new Thickness(6, 0, 0, 0);
                     one.Children.Add(b.Num);
                 }
+                else if (v.SpeedPlace == "Under the label")
+                {
+                    b.Icon.Margin = new Thickness(0, 0, 6, 0);
+                    one.Children.Add(b.Icon);
+                    one.Children.Add(Stack(b.Name, SmallSpeed(b, hh)));
+                    graph.Margin = new Thickness(6, 0, 0, 0);
+                    one.Children.Add(graph);
+                }
+                else if (v.SpeedPlace == "Under the graph")
+                {
+                    b.Icon.Margin = new Thickness(0, 0, 6, 0);
+                    one.Children.Add(b.Icon);
+                    one.Children.Add(b.Name);
+                    FitUnder(b.Graph, hh);
+                    graph.Margin = new Thickness(0);
+                    var col = Stack(graph, SmallSpeed(b, hh));
+                    col.Margin = new Thickness(6, 0, 0, 0);
+                    one.Children.Add(col);
+                }
                 else
                 {
                     b.Icon.Margin = new Thickness(0, 0, 6, 0);
@@ -306,6 +335,26 @@ namespace VShellFans
                 sp.Children.Add(b.Num);
                 sp.Children.Add(b.Unit);
             }
+            else if (v.SpeedPlace == "Under the label")
+            {
+                // the fan's name (or the module's title) with the speed under it, then the graph
+                b.Icon.Margin = new Thickness(0, 0, 7, 0);
+                sp.Children.Add(b.Icon);
+                if (title.Length > 0) sp.Children.Remove(b.Name);
+                b.Name.Text = title.Length > 0 ? title : f.Name;
+                b.Name.Margin = new Thickness(0);
+                sp.Children.Add(Stack(b.Name, SmallSpeed(b, hh, true)));
+                graph.Margin = new Thickness(7, 0, 0, 0);
+                sp.Children.Add(graph);
+            }
+            else if (v.SpeedPlace == "Under the graph")
+            {
+                b.Icon.Margin = new Thickness(0, 0, 7, 0);
+                sp.Children.Add(b.Icon);
+                FitUnder(b.Graph, hh);
+                graph.Margin = new Thickness(0);
+                sp.Children.Add(Stack(graph, SmallSpeed(b, hh, true)));
+            }
             else
             {
                 b.Icon.Margin = new Thickness(0, 0, 7, 0);
@@ -317,6 +366,44 @@ namespace VShellFans
             }
             b.Box = new Border { Child = sp };
             return b.Box;
+        }
+
+        // ---- Speed under the label / under the graph (1.2.0) ----
+
+        /// <summary>Two things one over the other, centred in the bar, the second tucked close under the first.</summary>
+        static StackPanel Stack(FrameworkElement top, FrameworkElement under)
+        {
+            var col = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            top.VerticalAlignment = VerticalAlignment.Top;
+            top.HorizontalAlignment = HorizontalAlignment.Left;
+            under.HorizontalAlignment = HorizontalAlignment.Left;
+            under.Margin = new Thickness(0, -1, 0, 0);
+            col.Children.Add(top);
+            col.Children.Add(under);
+            return col;
+        }
+
+        /// <summary>The speed in small type for a second line (with " rpm" when asked), sized so two lines fit the bar.</summary>
+        FrameworkElement SmallSpeed(Bits b, double hh, bool unit = false)
+        {
+            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            b.Num.FontSize = size;
+            b.Num.FontWeight = FontWeights.SemiBold;
+            b.Num.Margin = new Thickness(0);
+            b.Name.FontSize = Math.Max(7, Math.Min(b.Name.FontSize, size * 1.05));
+            if (!unit) return b.Num;
+            b.Unit.FontSize = Math.Max(7, size * 0.85);
+            var line = new StackPanel { Orientation = Orientation.Horizontal };
+            line.Children.Add(b.Num);
+            line.Children.Add(b.Unit);
+            return line;
+        }
+
+        /// <summary>Under the graph: the graph no taller than leaves room for the speed's line in the bar.</summary>
+        void FitUnder(MetricView g, double hh)
+        {
+            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            g.GraphH = Math.Max(3, Math.Min(g.GraphH, Math.Floor(hh - 6 - size * 1.3)));
         }
 
         FanIcon _iconOnly;

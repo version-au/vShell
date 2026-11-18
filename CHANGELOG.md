@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.231
+
+- Fans 1.2.0: on a bar with a graph by each fan (Line, Bars, Meter, Dots), Speed puts the rpm after the graph, under the fan's name or under the graph.
+
 ## 0.38.230 · pre-release
 
 - Dots: Temperature in dots is only offered where there's a temperature - CPU, memory, GPU and HWiNFO sensors (a module that had it set shows Stacked).

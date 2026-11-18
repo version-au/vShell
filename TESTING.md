@@ -3487,3 +3487,9 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 2. Network, Taking turns: '4.2' in dots with 'MB/s' in the font, then '↑ 610' in dots (a dotted up arrow) with 'KB/s' in the font - the same look both turns. CPU: '37%', then '4.2' + 'GHz', then '61°C' in its colour. Memory (More detail): '9.9/16.0' + 'GB'. Numbers in dots off: every turn in the font.
 3. Network with Show the Wi-Fi name, Taking turns: the Wi-Fi turn is in the font (a name has no dot shapes).
 4. A widget's module set to Dots: no Details in a bar row (Numbers in dots and Show the label are there). The same module type on a bar: the row is there.
+## 0.38.231 - Fans 1.2.0: where the speed goes on a bar
+1. A bar's Fans module, Style = Dots (then Line, Bars, Meter): Settings shows Speed (not for Tile, Ring, Fan only, or in a widget).
+2. After the graph (default): as before - fan, name, graph, speed.
+3. Under the label: every fan side by side - the fan, its name with the speed in small type under it, then the graph; one fan shown - the fan, its name (or the module's text in front) over '1,240 rpm', then the graph. Both lines inside the bar (try a 28 px and a 40 px bar).
+4. Under the graph: the fan, its name, then the graph with the speed under it; the graph a little shorter so both fit (Graph height high: it's capped). One fan: the fan, then the graph over '1,240 rpm'.
+5. A fan that stops: its speed turns the warning colour in every place; the speeds update every second without the module jumping.

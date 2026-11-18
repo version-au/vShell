@@ -245,6 +245,12 @@ namespace VShellFans
                     p.Slider("Graph height (% of " + of + ", 0 = automatic)", 0, 100, delegate { return v.GraphHeight; }, delegate (double d) { v.GraphHeight = (int)Math.Round(d); p.Changed(); });
                     p.Note(widget ? "Automatic: the graph takes the room left in the row, 60 % of its height (a meter: a thin bar)."
                                   : "Automatic: about 4 characters long and 45 % of the bar's height (a meter: a thin bar).");
+                    if (!widget && FanView.GraphBeside(style))
+                    {
+                        p.Combo("Speed", FanView.SpeedPlaces, delegate { return v.SpeedPlace; }, delegate (string s) { v.SpeedPlace = s; p.Changed(); });
+                        p.Note("Where each fan's speed goes: after the graph, in small type under the fan's name, or in small type under the graph " +
+                               "(the graph gets a little shorter so both fit the bar). Shorter modules than after the graph.");
+                    }
                     break;
             }
             if (style != FanView.FanOnly)
