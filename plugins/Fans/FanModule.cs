@@ -380,7 +380,7 @@ namespace VShellFans
         /// <summary>The speed in small type for a second line (with " rpm" when asked), sized so two lines fit the bar.</summary>
         FrameworkElement SmallSpeed(Bits b, double hh, bool unit = false)
         {
-            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            double size = UnderSize(hh);
             b.Num.FontSize = size;
             b.Num.FontWeight = FontWeights.SemiBold;
             b.Num.Margin = new Thickness(0);
@@ -393,11 +393,14 @@ namespace VShellFans
             return line;
         }
 
+        /// <summary>The small type under the label / graph: as vShell's Dots modules size theirs (75 % of the font, two lines fit the bar).</summary>
+        double UnderSize(double hh) { return Math.Max(7, Math.Min(_fs * 0.75, (hh - 4 - 3) / 2.3)); }
+
         /// <summary>Under the graph: the turning fan, shrunk to leave room, centred over the speed in small type.</summary>
         FrameworkElement FanOverSpeed(Bits b, double hh, bool unit)
         {
             FrameworkElement speed = SmallSpeed(b, hh, unit);
-            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            double size = UnderSize(hh);
             double icon = Math.Max(8, Math.Min(Math.Round(_fs * 1.15), Math.Floor(hh - 6 - size * 1.3)));
             b.Icon.Width = b.Icon.Height = icon;
             b.Icon.Margin = new Thickness(0);
@@ -413,7 +416,7 @@ namespace VShellFans
         /// <summary>Under the graph: the graph (shortened to leave room) with the fan's name - or name - under it in small type.</summary>
         FrameworkElement GraphOverName(Bits b, FrameworkElement graph, double hh, string name)
         {
-            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
+            double size = UnderSize(hh);
             FitUnder(b.Graph, hh);
             graph.Margin = new Thickness(0);
             if (name != null) b.Name.Text = name;
@@ -426,8 +429,12 @@ namespace VShellFans
         /// <summary>Under the graph: the graph no taller than leaves room for the line under it in the bar.</summary>
         void FitUnder(MetricView g, double hh)
         {
-            double size = Math.Max(7, Math.Min(_fs * 0.85, (hh - 4) / 2.6));
-            g.GraphH = Math.Max(3, Math.Min(g.GraphH, Math.Floor(hh - 6 - size * 1.3)));
+            double size = UnderSize(hh);
+            // as vShell's own Dots modules lay out Under the graph (DotFace): the module as tall as the bar less 4 px, a line of text
+            // (size x 1.25) and 3 px under 4 rows of dots, none bigger than the default graph's - so the dots are the same size as the
+            // CPU module's beside it (1.2.2; before, its own sum made them a little smaller)
+            double cell = Math.Max(2, Math.Min(hh * 0.6 / 4, (hh - 4 - size * 1.25 - 3) / 4));
+            g.GraphH = Math.Max(3, cell * 4);
         }
 
         FanIcon _iconOnly;
