@@ -3486,3 +3486,4 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 1. Details in a bar lists Temperature in dots for CPU, memory, GPU and HWiNFO sensor modules only; network, disk, battery and Downloads list the other four. A network module that had Temperature in dots set shows Stacked (and the list shows Stacked).
 2. Network, Taking turns: '4.2' in dots with 'MB/s' in the font, then '↑ 610' in dots (a dotted up arrow) with 'KB/s' in the font - the same look both turns. CPU: '37%', then '4.2' + 'GHz', then '61°C' in its colour. Memory (More detail): '9.9/16.0' + 'GB'. Numbers in dots off: every turn in the font.
 3. Network with Show the Wi-Fi name, Taking turns: the Wi-Fi turn is in the font (a name has no dot shapes).
+4. A widget's module set to Dots: no Details in a bar row (Numbers in dots and Show the label are there). The same module type on a bar: the row is there.

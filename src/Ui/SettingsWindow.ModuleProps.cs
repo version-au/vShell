@@ -605,6 +605,8 @@ namespace vShell.Ui
                 Check(p, "Show the label", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });
                 string[] details = ModuleTypes.DotDetailsFor(cfg.Type);
                 bool temps = Array.IndexOf(details, "Temperature in dots") >= 0;
+                // only for a bar's module: in a widget Dots is a tile, its details always at the top right (0.38.230)
+                if (_propsPane == null || !_propsPane.IsWidget)
                 ComboRow(p, "Details in a bar", details, delegate
                 {
                     string d = cfg.Bag.Get("dots.details", "Stacked");

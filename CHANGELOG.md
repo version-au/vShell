@@ -7,6 +7,7 @@ Newest first. The heading must start with `## ` and the version number exactly a
 
 - Dots: Temperature in dots is only offered where there's a temperature - CPU, memory, GPU and HWiNFO sensors (a module that had it set shows Stacked).
 - Dots, Taking turns: every turn looks like the number - the value in dots and its unit in the font (network's upload was plain text).
+- Details in a bar only shows in a bar's module settings (a widget's Dots tile has its details at the top right).
 
 ## 0.38.229 · pre-release
 
