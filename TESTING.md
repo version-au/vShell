@@ -3482,3 +3482,7 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 4. Taking turns: the number, '4.2 GHz' and '61°C' (in dots, the temperature in its colour) in turn every 3 s, three small dots under it saying which; the module keeps its width. Network's '↑ 610 KB/s' turns in the font.
 5. Under the graph: the graph 3 rows tall (4 for network) with '4.2 GHz · 61°C' under it; the module about as long as with no details.
 6. Every choice: the module keeps its width as the values change; a widget tile still shows the details at its top right; the other Dots modules (memory, GPU, network, disk, battery, sensors, Downloads) follow the same setting.
+## 0.38.230 - Dots: details per module, Taking turns all in dots
+1. Details in a bar lists Temperature in dots for CPU, memory, GPU and HWiNFO sensor modules only; network, disk, battery and Downloads list the other four. A network module that had Temperature in dots set shows Stacked (and the list shows Stacked).
+2. Network, Taking turns: '4.2' in dots with 'MB/s' in the font, then '↑ 610' in dots (a dotted up arrow) with 'KB/s' in the font - the same look both turns. CPU: '37%', then '4.2' + 'GHz', then '61°C' in its colour. Memory (More detail): '9.9/16.0' + 'GB'. Numbers in dots off: every turn in the font.
+3. Network with Show the Wi-Fi name, Taking turns: the Wi-Fi turn is in the font (a name has no dot shapes).

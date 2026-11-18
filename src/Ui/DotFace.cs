@@ -70,7 +70,7 @@ namespace vShell.Ui
             _keepNumW = 0;
             _keepExtraW = 0; _keepColW = 0; _keepColW2 = 0; _keepAfterW = 0;
             _detailMode = cfg.Bag.Get("dots.details", "Stacked");
-            if (Array.IndexOf(ModuleTypes.DotDetails, _detailMode) < 0) _detailMode = "Stacked";
+            if (Array.IndexOf(ModuleTypes.DotDetailsFor(cfg.Type), _detailMode) < 0) _detailMode = "Stacked";     // (Temperature in dots: only where there's one)
             _tempBrush = t.SecondaryAccent;
             if (cfg.LoadColors && ModuleTypes.HasLoadColors(cfg.Type))
             {
@@ -391,14 +391,55 @@ namespace vShell.Ui
             foreach (FormattedText f in parts) { dc.DrawText(f, new Point(x, midY - f.Height / 2)); x += f.WidthIncludingTrailingWhitespace; }
         }
 
-        /// <summary>A detail taking its turn: in dots when it can be ("4.2 GHz", "61°C", "9.9/16.0 GB"), else in the font, as tall.</summary>
-        bool TurnInDots(string s) { return _dotNumbers && DotText.CanDraw(s); }
-        double TurnWidth(string s, double nc) { return TurnInDots(s) ? DotText.Width(s, nc) : NumberText(s, nc * 0.8, _on).WidthIncludingTrailingWhitespace; }
+        // A detail taking its turn looks like the number does (0.38.230 - network's upload was text in the font, between dot numbers):
+        // its value in dots ("4.2", "↑ 610", "9.9/16.0", "61°C") and a unit of letters after it in the font, small and dim ("GHz", "KB/s",
+        // "GB"), as the number's "MB/s". Only what has no dot shapes at all (a Wi-Fi name) stays in the font, as tall as the dots.
+
+        /// <summary>"4.2 GHz" -> ("4.2", "GHz"); "61°C" or "↑ 610" (no letters at the end) -> (itself, null).</summary>
+        static void SplitUnit(string s, out string value, out string unit)
+        {
+            value = s; unit = null;
+            int sp = s.LastIndexOf(' ');
+            if (sp <= 0 || sp == s.Length - 1) return;
+            string tail = s.Substring(sp + 1);
+            bool letters = false;
+            foreach (char ch in tail) if (char.IsLetter(ch)) letters = true;
+            if (!letters) return;
+            value = s.Substring(0, sp).TrimEnd();
+            unit = tail;
+        }
+
+        bool TurnSplit(string s, out string value, out string unit)
+        {
+            SplitUnit(s, out value, out unit);
+            if (!_dotNumbers) return false;
+            if (unit != null && DotText.CanDraw(value)) return true;
+            unit = null; value = s;
+            return DotText.CanDraw(s);
+        }
+
+        FormattedText TurnUnit(string unit, double nc) { return Text(unit, Math.Max(7, nc * 7 * 0.8), FontWeights.Normal, _t.FgDim); }
+
+        double TurnWidth(string s, double nc)
+        {
+            string value, unit;
+            if (!TurnSplit(s, out value, out unit)) return Text(s, nc * 7, FontWeights.SemiBold, _on).WidthIncludingTrailingWhitespace;
+            return DotText.Width(value, nc) + (unit != null ? nc * 3 + TurnUnit(unit, nc).WidthIncludingTrailingWhitespace : 0);
+        }
+
         void DrawTurn(DrawingContext dc, string s, double x, double y, double nc, Brush b)
         {
-            if (TurnInDots(s)) { DotText.Draw(dc, s, x, y, nc, b); return; }
-            var f = Text(s, nc * 7 * 1.0, FontWeights.SemiBold, b);
-            dc.DrawText(f, new Point(x, y + nc * 7 - f.Baseline));
+            string value, unit;
+            if (!TurnSplit(s, out value, out unit))
+            {
+                var f = Text(s, nc * 7, FontWeights.SemiBold, b);
+                dc.DrawText(f, new Point(x, y + nc * 7 - f.Baseline));
+                return;
+            }
+            double right = DotText.Draw(dc, value, x, y, nc, b);
+            if (unit == null) return;
+            var u = TurnUnit(unit, nc);
+            dc.DrawText(u, new Point(right + nc * 3, y + nc * 7 - u.Baseline));
         }
 
         void RenderTile(DrawingContext dc, double w, double h)
@@ -634,6 +675,8 @@ namespace vShell.Ui
             { '-', new[] { "....", "....", "....", "####", "....", "....", "...." } },
             { '+', new[] { ".....", "..#..", "..#..", "#####", "..#..", "..#..", "....." } },
             { '/', new[] { "....#", "....#", "...#.", "..#..", ".#...", "#....", "#...." } },
+            { '↑', new[] { "..#..", ".###.", "#.#.#", "..#..", "..#..", "..#..", "..#.." } },     // ↑ upload (0.38.230)
+            { '↓', new[] { "..#..", "..#..", "..#..", "..#..", "#.#.#", ".###.", "..#.." } },     // ↓ download
             { 'K', new[] { "#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#" } },
             { 'M', new[] { "#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#" } },
             { 'G', new[] { ".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####" } },

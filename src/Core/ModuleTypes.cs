@@ -154,6 +154,13 @@ namespace vShell.Core
         public static readonly string[] GaugeStyles = { "Text", "Meter", "Bars", "Line", "Ring", "Tile", "Dots" };
         /// <summary>Dots in a bar: where the details (clock speed, GB, temperature …) go - "dots.details" in the module's bag (0.38.229).</summary>
         [PluginApi] public static readonly string[] DotDetails = { "Stacked", "Under the label", "Temperature in dots", "Taking turns", "Under the graph" };
+        /// <summary>The Details in a bar choices a module offers: Temperature in dots only where there's a temperature - CPU, memory, GPU
+        /// (Show temperature) and a HWiNFO sensor (often a temperature itself) (0.38.230).</summary>
+        public static string[] DotDetailsFor(string type)
+        {
+            if (type == Cpu || type == Memory || type == Gpu || type == Hwinfo) return DotDetails;
+            return Array.FindAll(DotDetails, delegate (string d) { return d != "Temperature in dots"; });
+        }
         /// <summary>Battery: the plain graphs and Dots.</summary>
         public static readonly string[] BatteryStyles = { "Text", "Meter", "Bars", "Line", "Dots" };
         public static bool HasGauges(string type) { return type == Cpu || type == Memory || type == Gpu || type == Disk || type == Hwinfo || type == Downloads || type == Network; }
