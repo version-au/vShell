@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.226
+## 0.38.226 · pre-release
 
 - The CPU module has a new style, Dots: its graph as columns of dots with the newest in the graph colour, and the number in dots (Numbers in dots - off = your font). In a widget it's a tile.
 
