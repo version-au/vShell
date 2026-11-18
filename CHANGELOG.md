@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.229
+## 0.38.229 · pre-release
 
 - Dots: Details in a bar - where the clock speed, GB, temperature and so on go: Stacked (two small lines after the number, the new default), Under the label, Temperature in dots, Taking turns or Under the graph. Shorter modules than one long line.
 
