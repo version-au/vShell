@@ -3517,3 +3517,7 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 3. The Fans bar module's popup (its tiles, Dots style): dots sized from the graph itself (no bar there), as before.
 ## 0.38.237 - plugin dot graphs spaced as the CPU module's
 1. A bar with a CPU module and a Fans module, both Dots: the dots the same size and the same distance apart across and down. Fans Speed = Under the graph: the name still starts under the graph's left edge (the newest column may sit a hair short of the right end).
+## 0.38.238 - Fans 1.2.4: steady speeds
+1. A bar's Fans module, Dots, Speed = Under the graph, every fan side by side: as the speeds change (860 / 1,240 / 950 …) the graphs and the next fan stay put; each speed centred under its fan in room for '8,888'.
+2. Under the label: the speed from the name's left edge, the graph beside it doesn't move. After the graph (and one fan with 'rpm'): the speed right-aligned in its room, 'rpm' right after it, nothing after it moves.
+3. A fan going past 9,999 rpm (a pump): its room grows once and then stays.

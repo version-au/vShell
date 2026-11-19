@@ -205,7 +205,8 @@ namespace VShellFans
         {
             var b = new Bits { Fan = f, Icon = new FanIcon(iconSize, ring) };
             b.Name = new TextBlock { Text = f.Name, Foreground = _t.FgDim, FontFamily = _t.Font, FontSize = nameSize, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
-            b.Num = new TextBlock { Foreground = _t.Fg, FontFamily = _t.Font, FontSize = numSize, FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center };
+            // right-aligned in its steady room (Steady), so a shorter number doesn't leave a gap before "rpm"; Under the label / graph set their own
+            b.Num = new TextBlock { Foreground = _t.Fg, FontFamily = _t.Font, FontSize = numSize, FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right };
             b.Unit = new TextBlock { Text = " rpm", Foreground = _t.FgDim, FontFamily = _t.Font, FontSize = Math.Max(7, numSize * 0.75), VerticalAlignment = VerticalAlignment.Center };
             b.Graph = new MetricView { GraphStyle = "Line", Track = _t.Track, Fill = _accent, WarnFill = StatusColors.Bad };
             b.Graph.ApplyLook(_cfg, _t);
@@ -384,6 +385,7 @@ namespace VShellFans
             b.Num.FontSize = size;
             b.Num.FontWeight = FontWeights.SemiBold;
             b.Num.Margin = new Thickness(0);
+            b.Num.TextAlignment = TextAlignment.Left;         // under the label: from its left edge (Under the graph centres it)
             b.Name.FontSize = Math.Max(7, Math.Min(b.Name.FontSize, size * 1.05));
             if (!unit) return b.Num;
             b.Unit.FontSize = Math.Max(7, size * 0.85);
@@ -407,6 +409,7 @@ namespace VShellFans
             var col = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) };
             b.Icon.HorizontalAlignment = HorizontalAlignment.Center;
             speed.HorizontalAlignment = HorizontalAlignment.Center;
+            b.Num.TextAlignment = TextAlignment.Center;       // centred under the fan in its steady room
             speed.Margin = new Thickness(0, 0, 0, 0);
             col.Children.Add(b.Icon);
             col.Children.Add(speed);
@@ -458,11 +461,29 @@ namespace VShellFans
             b.Fan = f;
             Brush c = f.Bad ? StatusColors.Bad : _accent;
             b.Num.Text = f.Rpm.ToString("N0");
+            Steady(b.Num);
             b.Num.Foreground = f.Bad ? StatusColors.Bad : _t.Fg;
             b.Name.Foreground = f.Bad ? StatusColors.Bad : _t.FgDim;
             if (b.Icon != null) { b.Icon.Colour(c, _t.Bg); b.Icon.Spin(f.Rpm, moving); }
             FanPanel.Feed(b.Graph, f, v.FullScale, c);
             ToolTip = Tip();
+        }
+
+        /// <summary>
+        /// The speed keeps its room as it changes (1.2.4 - "860" then "1,240" moved the graph / the next fan along): at least as wide as
+        /// "8,888", never narrower than the widest it has shown. Where it sits in that room is the layout's TextAlignment.
+        /// </summary>
+        static void Steady(TextBlock t)
+        {
+            double want = Math.Max(TextWidth(t, 8888.ToString("N0")), TextWidth(t, t.Text ?? ""));
+            if (want > t.MinWidth) t.MinWidth = want;
+        }
+
+        static double TextWidth(TextBlock t, string s)
+        {
+            var ft = new FormattedText(s, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                                       new Typeface(t.FontFamily, t.FontStyle, t.FontWeight, t.FontStretch), t.FontSize, Brushes.Black, 1.0);
+            return Math.Ceiling(ft.WidthIncludingTrailingWhitespace);
         }
 
         void ShowIconOnly(List<Fan> fans, bool moving)
