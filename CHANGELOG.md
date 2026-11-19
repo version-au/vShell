@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.238
+## 0.38.238 · release
 
 - Fans 1.2.4: each fan's speed keeps its room on a bar, so the graphs (and the next fan) no longer shift as the numbers change.
 
