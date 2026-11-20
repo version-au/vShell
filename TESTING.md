@@ -3529,3 +3529,4 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 4. Taking turns on Network with a Wi-Fi name made of letters: it now shows in dots too (letters now have dot shapes); "n/a" shows in dots.
 5. Mail popup / widget: Mark as read or Delete a message: the row goes at once and doesn't come back for a moment (also when a check was running as you clicked), the unread count drops by one. Several quickly in a row: each goes and stays gone.
 6. Make one fail (e.g. pull the network, or a wrong server after the list loaded): the row comes back and the "Couldn't …" message says why.
+7. Disk module (space, Drive letter D), Style Dots: clear the Text in front - the label shows 'D:' (not '68%' or '340/500 GB'). Same with Ring / Tile; Activity shows 'DISK'; Battery 'BAT'. Text style: no prefix at all, as before.

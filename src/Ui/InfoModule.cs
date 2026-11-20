@@ -177,6 +177,14 @@ namespace vShell.Ui
             return p.Length == 0 ? "" : p + " ";
         }
 
+        /// <summary>The label of a Dots / Ring / Tile look: the Text in front, or with it cleared, the module's own name ("C:") - not the
+        /// reading, which was the label then (0.38.239).</summary>
+        private protected string LabelOf(string fallback)
+        {
+            string p = Prefix(fallback).Trim();
+            return p.Length > 0 ? p : fallback;
+        }
+
         void ApplyTheme()
         {
             var t = Bar.Theme.ForModule(Cfg);
@@ -514,7 +522,7 @@ namespace vShell.Ui
                 r.Text = Cfg.ShownLines2 ? head + "\n" + rw : head + (Cfg.ShowDetail ? "  " + rw : "");
                 r.Tip = "Disk busy time " + b.ToString("0") + "%\nRead " + Speed(DiskActivity.ReadBps, false) + ", write " + Speed(DiskActivity.WriteBps, false);
                 r.Percent = b;
-                r.Label = Prefix("Disk").Trim();
+                r.Label = LabelOf("Disk");
                 r.Detail = Cfg.ShowDetail ? rw : "";
                 return;
             }
@@ -522,7 +530,7 @@ namespace vShell.Ui
             string root = Root();
             if (!_spaceBusy && (root != _root || (DateTime.UtcNow - _spaceAt).TotalSeconds > 15)) RefreshSpace(root);
             string name = root.Substring(0, 2);
-            r.Label = Prefix(name).Trim();
+            r.Label = LabelOf(name);
             if (!_spaceOk || _total <= 0 || root != _root) { r.Text = Prefix(name) + (root != _root ? "…" : "n/a"); r.Number = root != _root ? "…" : "n/a"; r.Unit = ""; return; }
             double used = _total - _free;
             double pct = used / _total * 100.0;
@@ -560,7 +568,7 @@ namespace vShell.Ui
             r.Percent = Math.Max(0, b.Percent);
             string state = b.Charging ? "charging" : (b.OnAc ? "plugged in" : "on battery");
             // Dots: "BAT", the percentage, and how it's doing (time left on battery)
-            r.Label = Prefix("BAT").Trim();
+            r.Label = LabelOf("BAT");
             r.Number = b.Percent >= 0 ? b.Percent.ToString(CultureInfo.CurrentCulture) : "?";
             r.Unit = b.Percent >= 0 ? "%" : "";
             // as the text's "+": charging, or the time left on battery (nothing while plugged in and full)

@@ -6,6 +6,7 @@ Newest first. The heading must start with `## ` and the version number exactly a
 ## 0.38.239
 
 - Dots: a "Name in dots" setting draws the label (C:, CPU, RAM …) in dots too.
+- Disk / Battery (Dots, Ring, Tile): with the Text in front cleared, the label is the drive letter (or Disk / BAT) instead of the reading.
 - Mail: a message marked read or deleted leaves the list at once and stays gone while the server catches up; it comes back only if that fails.
 
 ## 0.38.238 · release
