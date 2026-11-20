@@ -3,6 +3,11 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.239
+
+- Dots: a "Name in dots" setting draws the label (C:, CPU, RAM …) in dots too.
+- Mail: a message marked read or deleted leaves the list at once and stays gone while the server catches up; it comes back only if that fails.
+
 ## 0.38.238 · release
 
 - Fans 1.2.4: each fan's speed keeps its room on a bar, so the graphs (and the next fan) no longer shift as the numbers change.

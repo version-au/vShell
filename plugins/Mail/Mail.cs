@@ -126,7 +126,23 @@ namespace Mail
         public const int ListMax = 100;
 
         static readonly object Gate = new object();
+        /// <summary>Each account's last check, as the server gave it (what's shown leaves out Away's messages).</summary>
         static readonly Dictionary<string, MailState> States = new Dictionary<string, MailState>();
+
+        /// <summary>
+        /// A message marked read or deleted (2.x): out of the list at once and kept out while the server does it in the background - and
+        /// after, until a check that started once it was done no longer has it (a check already under way would have brought it back for a
+        /// moment). If the server says no, it comes back.
+        /// </summary>
+        sealed class Gone
+        {
+            public long Uid;
+            public bool Done;
+            public DateTime DoneAt;
+        }
+        static readonly Dictionary<string, List<Gone>> Away = new Dictionary<string, List<Gone>>();
+        /// <summary>The longest a message stays out once the server said yes but checks still list it.</summary>
+        static readonly TimeSpan AwayMax = TimeSpan.FromMinutes(2);
         /// <summary>Each account's Trash folder as the server names it ("" = it has none), once looked up.</summary>
         static readonly Dictionary<string, string> Trash = new Dictionary<string, string>();
 
@@ -177,6 +193,7 @@ namespace Mail
                 }
                 foreach (string id in new List<string>(States.Keys)) if (!keep.Contains(id)) States.Remove(id);
                 foreach (string id in new List<string>(Trash.Keys)) if (!keep.Contains(id)) Trash.Remove(id);
+                foreach (string id in new List<string>(Away.Keys)) if (!keep.Contains(id)) Away.Remove(id);
             }
             _notifyNew = m.NotifyNew; _notifyServer = m.NotifyServer; _delay = m.NotifyDelay; _lines = m.NotifyLines;
             if (!m.Configured) { Stop(); _sig = ""; return; }
@@ -198,7 +215,7 @@ namespace Mail
         public static void Stop()
         {
             if (_poller != null) { _poller.Stop(); _poller = null; }
-            lock (Gate) { States.Clear(); Trash.Clear(); }
+            lock (Gate) { States.Clear(); Trash.Clear(); Away.Clear(); }
             CloseSessions();
         }
 
@@ -295,7 +312,7 @@ namespace Mail
                     if (a == null || !a.Usable) continue;
                     MailState st;
                     if (!States.TryGetValue(a.Id, out st)) st = new MailState { Account = a, Pending = true };
-                    list.Add(st);
+                    list.Add(Without(st));
                 }
             return list;
         }
@@ -328,9 +345,40 @@ namespace Mail
 
         static async Task CheckOne(MailAccount a)
         {
+            DateTime started = DateTime.UtcNow;
             MailState st = await ReadAsync(a, a.SeenValidity, a.SeenNext, ListMax);
-            lock (Gate) States[a.Id] = st;
+            lock (Gate)
+            {
+                States[a.Id] = st;
+                // done ones this check has seen the end of (it started after they were done and doesn't list them) are finished with
+                List<Gone> away;
+                if (st.Error == null && Away.TryGetValue(a.Id, out away))
+                {
+                    away.RemoveAll(delegate (Gone g)
+                    {
+                        if (!g.Done) return false;
+                        if (DateTime.UtcNow - g.DoneAt > AwayMax) return true;
+                        return g.DoneAt <= started && !st.Messages.Exists(delegate (MailMessage m) { return m.Uid == g.Uid; });
+                    });
+                    if (away.Count == 0) Away.Remove(a.Id);
+                }
+            }
             Compare(a, st);
+        }
+
+        /// <summary>What's shown for an account: its last check without the messages being marked read / deleted (call under Gate).</summary>
+        static MailState Without(MailState st)
+        {
+            List<Gone> away;
+            if (st.Pending || st.Error != null || !Away.TryGetValue(st.Account.Id, out away) || away.Count == 0) return st;
+            var copy = new MailState { Account = st.Account, Unread = st.Unread, At = st.At, Check = st.Check, Messages = new List<MailMessage>(st.Messages.Count) };
+            foreach (MailMessage m in st.Messages)
+            {
+                if (away.Exists(delegate (Gone g) { return g.Uid == m.Uid; })) { copy.Unread--; continue; }
+                copy.Messages.Add(m);
+            }
+            if (copy.Unread < 0) copy.Unread = 0;
+            return copy;
         }
 
         /// <summary>One check of an account: log in, open the folder, count the unread and read the newest ones' headers.</summary>
@@ -412,8 +460,16 @@ namespace Mail
 
         static async Task<string> ActAsync(MailAccount a, long uid, bool delete)
         {
-            // what's shown changes at once; put back if the server says no (the next check confirms either way)
-            MailState before = Shown(a, uid, true);
+            // out of the list at once and kept out (a check that's already under way doesn't bring it back); back if the server says no
+            Gone gone = new Gone { Uid = uid };
+            lock (Gate)
+            {
+                List<Gone> away;
+                if (!Away.TryGetValue(a.Id, out away)) Away[a.Id] = away = new List<Gone>();
+                away.RemoveAll(delegate (Gone g) { return g.Uid == uid; });
+                away.Add(gone);
+            }
+            Raise();
             string err = null;
             for (int attempt = 0; attempt < 2; attempt++)
             {
@@ -446,32 +502,18 @@ namespace Mail
             }
             if (err != null)
             {
-                if (before != null) lock (Gate) States[a.Id] = before;
+                lock (Gate)
+                {
+                    List<Gone> away;
+                    if (Away.TryGetValue(a.Id, out away)) { away.Remove(gone); if (away.Count == 0) Away.Remove(a.Id); }
+                }
                 Raise();
                 return err;
             }
+            lock (Gate) { gone.Done = true; gone.DoneAt = DateTime.UtcNow; }
             Poller p = _poller;
             if (p != null) p.PollNow();
             return null;
-        }
-
-        /// <summary>Takes a message out of what's shown for the account (the state before, to put back - null when it wasn't shown).</summary>
-        static MailState Shown(MailAccount a, long uid, bool remove)
-        {
-            MailState before = null;
-            lock (Gate)
-            {
-                MailState st;
-                if (States.TryGetValue(a.Id, out st) && st.Error == null && st.Messages.Exists(delegate (MailMessage m) { return m.Uid == uid; }))
-                {
-                    before = st;
-                    var copy = new MailState { Account = st.Account, Unread = Math.Max(0, st.Unread - 1), At = st.At, Check = st.Check, Messages = new List<MailMessage>(st.Messages) };
-                    copy.Messages.RemoveAll(delegate (MailMessage m) { return m.Uid == uid; });
-                    States[a.Id] = copy;
-                }
-            }
-            Raise();
-            return before;
         }
 
         static void Raise()

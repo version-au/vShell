@@ -3521,3 +3521,11 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 1. A bar's Fans module, Dots, Speed = Under the graph, every fan side by side: as the speeds change (860 / 1,240 / 950 …) the graphs and the next fan stay put; each speed centred under its fan in room for '8,888'.
 2. Under the label: the speed from the name's left edge, the graph beside it doesn't move. After the graph (and one fan with 'rpm'): the speed right-aligned in its room, 'rpm' right after it, nothing after it moves.
 3. A fan going past 9,999 rpm (a pump): its room grows once and then stays.
+
+## 0.38.239 - Name in dots; Mail rows go and stay gone
+1. A Disk module (space, C:), Style Dots, on a bar: Settings shows "Name in dots" under "Numbers in dots" (off at first). Turn it on: "C:" is drawn in dots, as tall as the number, dim, before the graph; off: the small spaced letters as before. Try D: and Activity ("DISK").
+2. The same on CPU / RAM / GPU / Network / Battery / a HWiNFO sensor: "CPU", "RAM", "NETWORK" in dots. A label with a character dots can't draw (a sensor's own name with brackets) stays in the font.
+3. Details in a bar = Under the label with Name in dots: the dot label sits over the small line, both fit the bar. A widget tile: the label in small dots at the top left, the details still at the top right.
+4. Taking turns on Network with a Wi-Fi name made of letters: it now shows in dots too (letters now have dot shapes); "n/a" shows in dots.
+5. Mail popup / widget: Mark as read or Delete a message: the row goes at once and doesn't come back for a moment (also when a check was running as you clicked), the unread count drops by one. Several quickly in a row: each goes and stays gone.
+6. Make one fail (e.g. pull the network, or a wrong server after the list loaded): the row comes back and the "Couldn't …" message says why.

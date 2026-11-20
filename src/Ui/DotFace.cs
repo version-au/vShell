@@ -28,7 +28,7 @@ namespace vShell.Ui
         IModuleHost _host;
         Brush _accent, _accent2, _warnFill, _on, _on2, _off;
         Color[] _load;
-        bool _tile, _meter, _dotNumbers = true, _showLabel = true;
+        bool _tile, _meter, _dotNumbers = true, _dotLabel, _showLabel = true;
         double _graphW = 60, _heightPercent = 60;
         int _span = 60;
         double _warnAt = -1;
@@ -63,6 +63,7 @@ namespace vShell.Ui
             _off = Frozen(Color.FromArgb(38, fg.R, fg.G, fg.B));
             _on2 = t.FgDim;
             _dotNumbers = cfg.Bag.Get("dots.numbers", true);
+            _dotLabel = cfg.Bag.Get("dots.label", false);
             _showLabel = cfg.ShowText;
             _graphW = Math.Max(20, cfg.ShownGraphWidth);
             _heightPercent = Math.Max(20, Math.Min(100, cfg.ShownGraphHeightPercent));
@@ -208,7 +209,7 @@ namespace vShell.Ui
                 double w = Math.Max(_graphW, 120) + Pad * 2;
                 if (!double.IsInfinity(available.Width)) w = Math.Min(w, available.Width);
                 // the detail / temperature on a line of its own when it doesn't fit beside the label
-                if (HasExtra && ExtraWidth() > w - Pad * 2 - (_showLabel ? Spaced(_label, LabelSize).Width + 10 : 0)) h += LabelSize * 1.2 + 2;
+                if (HasExtra && ExtraWidth() > w - Pad * 2 - (_showLabel ? LabelBox(LabelCell).Width + 10 : 0)) h += LabelSize * 1.2 + 2;
                 return new Size(w, Math.Max(h, HostH));
             }
             // the number's room never shrinks while the look stays the same, so the module doesn't jiggle as the number changes
@@ -265,14 +266,16 @@ namespace vShell.Ui
             {
                 string under = tmp ?? det;
                 var u = Text(under, small, FontWeights.Normal, tmp != null ? _tempBrush : _t.FgDim);
-                Size lab = _showLabel && _label.Length > 0 ? Spaced(_label, LabelSize) : new Size(0, 0);
+                // a dot label shares the row with the line under it: as big as fits over it
+                double lc = Math.Max(1, Math.Min(LabelCell, (h - u.Height - 1) / 7.0));
+                Size lab = _showLabel && _label.Length > 0 ? LabelBox(lc) : new Size(0, 0);
                 _keepColW = Math.Max(_keepColW, Math.Max(lab.Width, u.WidthIncludingTrailingWhitespace));
                 if (draw)
                 {
                     if (lab.Width > 0)
                     {
                         double top = (h - (lab.Height + u.Height - 1)) / 2;
-                        DrawSpaced(dc, _label, LabelSize, new Point(0, top), _t.FgDim);
+                        DrawLabel(dc, new Point(0, top), lc);
                         dc.DrawText(u, new Point(0, top + lab.Height - 1));
                     }
                     else dc.DrawText(u, new Point(0, (h - u.Height) / 2));
@@ -281,8 +284,8 @@ namespace vShell.Ui
             }
             else if (_showLabel && _label.Length > 0)
             {
-                var lab = Spaced(_label, LabelSize);
-                if (draw) DrawSpaced(dc, _label, LabelSize, new Point(0, (h - lab.Height) / 2), _t.FgDim);
+                var lab = LabelBox(LabelCell);
+                if (draw) DrawLabel(dc, new Point(0, (h - lab.Height) / 2), LabelCell);
                 x += lab.Width + 8;
             }
 
@@ -458,8 +461,8 @@ namespace vShell.Ui
             double y = Pad;
             if (_showLabel || HasExtra)
             {
-                Size lab = _showLabel ? Spaced(_label, LabelSize) : new Size(0, LabelSize * 1.2);
-                if (_showLabel) DrawSpaced(dc, _label, LabelSize, new Point(Pad, y), _t.FgDim);
+                Size lab = _showLabel ? LabelBox(LabelCell) : new Size(0, LabelSize * 1.2);
+                if (_showLabel) DrawLabel(dc, new Point(Pad, y), LabelCell);
                 double lineH = Math.Max(lab.Height, LabelSize * 1.2);
                 if (HasExtra)
                 {
@@ -634,6 +637,23 @@ namespace vShell.Ui
                                      VisualTreeHelper.GetDpi(this).PixelsPerDip);
         }
 
+        // ---- the label: small spaced capitals in the font, or in dots ("Name in dots", 0.38.239 - dots.label) ----
+
+        bool LabelInDots { get { return _dotLabel && DotText.CanDraw(_label); } }
+        /// <summary>A dot label's pitch: in a bar the number's (as tall as it - "C:" beside "41%"); in a tile about the label line's height.</summary>
+        double LabelCell { get { return _tile ? Math.Max(1.2, LabelSize * 1.2 / 7) : NumCell; } }
+
+        Size LabelBox(double cell)
+        {
+            return LabelInDots ? new Size(DotText.Width(_label, cell), cell * 7) : Spaced(_label, LabelSize);
+        }
+
+        void DrawLabel(DrawingContext dc, Point at, double cell)
+        {
+            if (LabelInDots) DotText.Draw(dc, _label, at.X, at.Y, cell, _t.FgDim);
+            else DrawSpaced(dc, _label, LabelSize, at, _t.FgDim);
+        }
+
         /// <summary>The label in capitals with a little space between the letters (its size).</summary>
         Size Spaced(string s, double size)
         {
@@ -700,6 +720,24 @@ namespace vShell.Ui
             { 'Z', new[] { "#####", "....#", "...#.", "..#..", ".#...", "#....", "#####" } },
             { 'S', new[] { ".####", "#....", "#....", ".###.", "....#", "....#", "####." } },
             { ' ', new[] { "...", "...", "...", "...", "...", "...", "..." } },
+            // the rest of the alphabet and ":" (0.38.239 - Name in dots: "C:", "CPU", "RAM", "DISK" …)
+            { 'A', new[] { ".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#" } },
+            { 'D', new[] { "####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####." } },
+            { 'E', new[] { "#####", "#....", "#....", "####.", "#....", "#....", "#####" } },
+            { 'I', new[] { "###", ".#.", ".#.", ".#.", ".#.", ".#.", "###" } },
+            { 'J', new[] { "..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.." } },
+            { 'L', new[] { "#....", "#....", "#....", "#....", "#....", "#....", "#####" } },
+            { 'N', new[] { "#...#", "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#" } },
+            { 'O', new[] { ".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###." } },
+            { 'P', new[] { "####.", "#...#", "#...#", "####.", "#....", "#....", "#...." } },
+            { 'Q', new[] { ".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#" } },
+            { 'R', new[] { "####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#" } },
+            { 'T', new[] { "#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.." } },
+            { 'U', new[] { "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###." } },
+            { 'X', new[] { "#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#" } },
+            { 'Y', new[] { "#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.." } },
+            { ':', new[] { ".", "#", ".", ".", ".", "#", "." } },
+            { '_', new[] { ".....", ".....", ".....", ".....", ".....", ".....", "#####" } },
         };
 
         /// <summary>Whether every character has a dot shape (letters are taken as capitals).</summary>

@@ -602,6 +602,8 @@ namespace vShell.Ui
                          : cfg.Type == ModuleTypes.Disk ? " Disk space: the dots fill up from the left as the drive does (Activity keeps a history)." : ""));
                 Check(p, "Numbers in dots", delegate { return cfg.Bag.Get("dots.numbers", true); }, delegate (bool v) { cfg.Bag.Set("dots.numbers", v); },
                       "The number drawn in dots, like the graph. Off = the number in your font (easier to read when small).");
+                Check(p, "Name in dots", delegate { return cfg.Bag.Get("dots.label", false); }, delegate (bool v) { cfg.Bag.Set("dots.label", v); },
+                      "The label (" + (cfg.Type == ModuleTypes.Disk ? "the drive letter, C:" : "CPU, RAM …") + ") drawn in dots too. Off = small letters in your font.");
                 Check(p, "Show the label", delegate { return cfg.ShowText; }, delegate (bool v) { cfg.ShowText = v; });
                 string[] details = ModuleTypes.DotDetailsFor(cfg.Type);
                 bool temps = Array.IndexOf(details, "Temperature in dots") >= 0;
