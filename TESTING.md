@@ -3537,3 +3537,5 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 3. Turn "Send vShell's colours" off: nothing more is sent (vMediarr keeps the last ones; its own toggle turns them off there).
 4. With vMediarr stopped when vShell starts: once vMediarr answers (a look every minute), the colours go.
 5. The palette: "Open vMediarr", "vMediarr: Movies / Series / Add / Calendar / Wanted / Requests" open its pages.
+6. (plugin 1.1.0, vMediarr 0.0.9 or newer) Add the vMediarr module to a bar: a dot and "↓ n" (· n asked in amber with requests waiting, ⚠ n for failed downloads). Click: the downloads with progress bars, "n requests are waiting for you" (opens vMediarr's Requests), the week's episodes - each opens its page in vMediarr. In a widget: the same, with "How many of each" and "The week's episodes" in its settings.
+7. Notifications: someone asks at /ask - "sam asked for Glass Coast (2024)" (Requests waiting kind); a download imported - "… is here"; a failed one - the Problems kind. Settings > Notifications > vMediarr chooses how each shows. Nothing old is replayed when vShell starts.

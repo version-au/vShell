@@ -5,7 +5,7 @@ Newest first. The heading must start with `## ` and the version number exactly a
 
 ## 0.38.240
 
-- vMediarr plugin 1.0.0 (new): your vShell colours on vMediarr's pages, and palette commands to open them.
+- vMediarr plugin 1.1.0 (new): a vMediarr module (what's downloading, requests waiting, the week's episodes), its notifications, your vShell colours on its pages, palette commands.
 
 ## 0.38.239 · pre-release
 
