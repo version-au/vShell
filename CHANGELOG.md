@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.240
+
+- vMediarr plugin 1.0.0 (new): your vShell colours on vMediarr's pages, and palette commands to open them.
+
 ## 0.38.239 · pre-release
 
 - Dots: a "Name in dots" setting draws the label (C:, CPU, RAM …) in dots too.

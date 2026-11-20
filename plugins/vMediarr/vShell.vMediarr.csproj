@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The vMediarr plugin: vShell's colours sent to your vMediarr server's pages (as vDeploy / vPatch), and palette commands to open its
+       pages. Made only with the plugin API; it keeps its own version. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>vShell.vMediarr</AssemblyName>
+    <RootNamespace>VMediarr</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Version>1.0.0</Version>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <DebugType>none</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- compiled against vShell; at run time it uses the vShell that loads it (never copied next to the plugin) -->
+    <ProjectReference Include="..\..\vShell.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

@@ -3530,3 +3530,10 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 5. Mail popup / widget: Mark as read or Delete a message: the row goes at once and doesn't come back for a moment (also when a check was running as you clicked), the unread count drops by one. Several quickly in a row: each goes and stays gone.
 6. Make one fail (e.g. pull the network, or a wrong server after the list loaded): the row comes back and the "Couldn't …" message says why.
 7. Disk module (space, Drive letter D), Style Dots: clear the Text in front - the label shows 'D:' (not '68%' or '340/500 GB'). Same with Ring / Tile; Activity shows 'DISK'; Battery 'BAT'. Text style: no prefix at all, as before.
+
+## 0.38.240 - the vMediarr plugin
+1. Settings > Plugins: vMediarr is listed (Servers & network). Add it; fill in the address (the test LXC: http://192.168.2.41:8490) and an app key from vMediarr's Options > Sign-in > Apps. Test: "vMediarr 0.0.4 - n movies, n series".
+2. vMediarr's Options > Look says the colours were sent by the plugin; its pages take your vShell theme. Change vShell's accent: vMediarr's pages follow within a few seconds (after a reload of the page).
+3. Turn "Send vShell's colours" off: nothing more is sent (vMediarr keeps the last ones; its own toggle turns them off there).
+4. With vMediarr stopped when vShell starts: once vMediarr answers (a look every minute), the colours go.
+5. The palette: "Open vMediarr", "vMediarr: Movies / Series / Add / Calendar / Wanted / Requests" open its pages.
