@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.239
+## 0.38.239 · pre-release
 
 - Dots: a "Name in dots" setting draws the label (C:, CPU, RAM …) in dots too.
 - Disk / Battery (Dots, Ring, Tile): with the Text in front cleared, the label is the drive letter (or Disk / BAT) instead of the reading.
