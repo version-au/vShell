@@ -3561,3 +3561,11 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 1. Settings: drag it slowly from one monitor onto the next and back - as smooth as dragging it around one monitor; each part shows its own monitor's wallpaper, moving with the window.
 2. Half off a screen's edge, and onto a monitor of another size / height: the same.
 3. Change the wallpaper (or a monitor's resolution): within a few seconds the glass shows the new one.
+
+## 0.38.245 - snap layouts on Settings' maximise button
+1. Windows Settings > System > Multitasking > Snap windows on, and "Show snap layouts when I hover over a window's maximize button" ticked. vShell's Settings: rest the pointer on the maximise button - Windows' layouts menu opens under it; pick a layout and the window snaps there. The button lights up while the pointer is on it, darker while pressed, and goes back when the pointer leaves (also when it leaves fast, off the window).
+2. Click the button (no menu needed): maximises; again: restores (the glyph follows). Press on it, slide off, let go: nothing happens.
+3. Maximised: the same, with the button where it is then. On the other monitor (different scaling): the menu opens on that button, not beside it.
+4. Untick the Show snap layouts setting (or Snap windows) with Settings open: within a few seconds the button is the plain one again - its own hover, its "Maximise" / "Restore" tooltip, no menu. Tick it again: the menu is back. Win+Z and dragging to the top of the screen work as before either way.
+5. Minimise, close, dragging by the caption row and double-clicking it: as before.
+6. Automatic: vSuite.Tests `SnapLayoutsTests` (a WindowChrome window: "the maximise button" for Windows only while on, the Click on a press and release there, the hover look cleared on leaving).

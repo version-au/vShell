@@ -173,6 +173,8 @@ namespace vShell.Ui
             caption.Children.Add(CaptionButton("\uE921", "Minimise", "vx.CaptionButton", delegate { WindowState = WindowState.Minimized; }));
             _maxBtn = CaptionButton("\uE922", "Maximise", "vx.CaptionButton", delegate { WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized; });
             caption.Children.Add(_maxBtn);
+            // Windows 11's snap layouts menu when the pointer rests on it (only while Windows' setting is on - else the plain button)
+            vSuite.Ui.SnapLayouts.Attach(this, _maxBtn);
             caption.Children.Add(CaptionButton("\uE8BB", "Close", "vx.CloseButton", Close));
             right.Children.Add(caption);
             _content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };

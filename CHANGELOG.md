@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.245
+
+- Settings: Windows 11's snap layouts show when the pointer rests on the maximise button, if Windows' setting for them is on (vSuite.Core 1.0.44).
+
 ## 0.38.244 · release
 
 - Settings and widgets: dragged across monitors or past a screen's edge, as smooth as on one monitor (vSuite.Core 1.0.43 - the whole desktop's wallpaper as one picture).
