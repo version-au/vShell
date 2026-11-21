@@ -3556,3 +3556,8 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 2. Drag it half off the left / right / bottom edge of a screen: the glass keeps moving with it (it used to stop at the edge).
 3. Drag it around one monitor: smooth, as 0.38.242; let go - the page is live (hover highlights) and sharp.
 4. Widgets dragged around (and across monitors): their glass follows too.
+
+## 0.38.244 - smooth across monitors
+1. Settings: drag it slowly from one monitor onto the next and back - as smooth as dragging it around one monitor; each part shows its own monitor's wallpaper, moving with the window.
+2. Half off a screen's edge, and onto a monitor of another size / height: the same.
+3. Change the wallpaper (or a monitor's resolution): within a few seconds the glass shows the new one.

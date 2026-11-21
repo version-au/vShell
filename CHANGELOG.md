@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.244
+
+- Settings and widgets: dragged across monitors or past a screen's edge, as smooth as on one monitor (vSuite.Core 1.0.43 - the whole desktop's wallpaper as one picture).
+
 ## 0.38.243 · pre-release
 
 - Settings: dragged across two monitors or past a screen's edge, the glass behind it keeps moving with it, each monitor's wallpaper where that monitor is (vSuite.Core 1.0.42).
