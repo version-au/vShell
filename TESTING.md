@@ -3569,3 +3569,7 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 4. Untick the Show snap layouts setting (or Snap windows) with Settings open: within a few seconds the button is the plain one again - its own hover, its "Maximise" / "Restore" tooltip, no menu. Tick it again: the menu is back. Win+Z and dragging to the top of the screen work as before either way.
 5. Minimise, close, dragging by the caption row and double-clicking it: as before.
 6. Automatic: vSuite.Tests `SnapLayoutsTests` (a WindowChrome window: "the maximise button" for Windows only while on, the Click on a press and release there, the hover look cleared on leaving).
+
+## 0.38.246 - snap layouts, read for real
+1. 0.38.245's steps 1-5 again: 0.38.245 never read Windows' setting (vSuite.Core 1.0.44's first check overflowed), so the button was always the plain one. Check: with Settings open, a WM_NCHITTEST sent to it at the maximise button's middle answers 9 (HTMAXBUTTON) with the setting on, 1 with it off.
+2. Automatic: vSuite.Tests `SnapLayoutsTests.windows_setting_is_read_the_first_time_then_every_few_seconds`.
