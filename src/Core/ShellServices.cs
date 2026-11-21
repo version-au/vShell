@@ -73,6 +73,20 @@ namespace vShell.Core
             return false;
         }
 
+        /// <summary>Explorer's taskbars for the log: "0,1392 2560x48 hidden; …".</summary>
+        public static string DescribeTaskbars()
+        {
+            var parts = new List<string>();
+            foreach (IntPtr h in ExplorerTaskbars())
+            {
+                RECT r;
+                if (!Native.GetWindowRect(h, out r)) continue;
+                parts.Add(r.Left + "," + r.Top + " " + (r.Right - r.Left) + "x" + (r.Bottom - r.Top) +
+                          (Native.IsWindowVisible(h) ? "" : " hidden"));
+            }
+            return parts.Count == 0 ? "none" : string.Join("; ", parts);
+        }
+
         /// <summary>Explorer re-shows its taskbar now and then; call this from a timer.</summary>
         public static void KeepHidden()
         {

@@ -877,9 +877,25 @@ namespace vShell.Ui
                         Log.Write("Bar '" + Placement.Edge + "': Windows' hidden taskbar still holds " + Math.Abs(top ? abd.rc.Top - rc.Top : rc.Bottom - abd.rc.Bottom) +
                                   " px of this edge (it couldn't auto-hide) - the bar stays at the edge");
                     _ignoredTaskbar = true;
+                    _pushedSince = DateTime.MinValue;
                     abd.rc = rc;
                 }
-                else _ignoredTaskbar = false;
+                else
+                {
+                    _ignoredTaskbar = false;
+                    // pushed in with Windows' taskbar meant to be hidden: likely Explorer still settling after the monitors woke (its
+                    // taskbar not on the edge yet) - CheckPlace looks again for a while instead of leaving the bar up the screen
+                    if (pushed && _mgr.Settings.HideWindowsTaskbar)
+                    {
+                        if (_pushedSince == DateTime.MinValue)
+                        {
+                            _pushedSince = DateTime.UtcNow;
+                            Log.Write("Bar '" + Placement.Edge + "': pushed " + Math.Abs(top ? abd.rc.Top - rc.Top : rc.Bottom - abd.rc.Bottom) +
+                                      " px in from the edge by another app bar (Explorer's taskbars: " + ShellServices.DescribeTaskbars() + ") - looking again for 2 minutes");
+                        }
+                    }
+                    else _pushedSince = DateTime.MinValue;
+                }
                 if (top) abd.rc.Bottom = abd.rc.Top + reserve; else abd.rc.Top = abd.rc.Bottom - reserve;
                 if (!_hasLastReserved || !SameRect(abd.rc, _lastReserved))
                 {
@@ -928,6 +944,7 @@ namespace vShell.Ui
 
         RECT _placedWin, _placedMon;
         bool _hasPlacedWin, _ignoredTaskbar;
+        DateTime _pushedSince = DateTime.MinValue, _lookedAgain;
 
         /// <summary>The window is still where ApplyPlacement put it (nothing else moved or resized it).</summary>
         bool StillWherePut()
@@ -951,7 +968,12 @@ namespace vShell.Ui
             MonitorInfo own = MonitorHelper.Find(Placement.Monitor, Placement.MonitorKey);
             bool monChanged = own != null && !SameRect(own.Bounds, _placedMon);
             if (monChanged) Log.Write("Bar '" + Placement.Edge + "': its monitor is now " + own.Bounds.Width + "x" + own.Bounds.Height + " at " + own.Bounds.Left + "," + own.Bounds.Top + " - placed again");
-            if (own == null || monChanged || !StillWherePut()) { _placedKey = null; ApplyPlacement(); }
+            // pushed in from the edge (see ApplyPlacement): ask Windows again every 5 s for the first 2 minutes
+            var now = DateTime.UtcNow;
+            bool lookAgain = _pushedSince != DateTime.MinValue && now - _pushedSince < TimeSpan.FromMinutes(2) && now - _lookedAgain >= TimeSpan.FromSeconds(5);
+            if (lookAgain) _lookedAgain = now;
+            if (own == null || monChanged || lookAgain || !StillWherePut()) { _placedKey = null; ApplyPlacement(); }
+            if (lookAgain && _pushedSince == DateTime.MinValue) Log.Write("Bar '" + Placement.Edge + "': no longer pushed in - back at the edge");
         }
 
         static bool SameRect(RECT a, RECT b)        {
