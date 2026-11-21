@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.246
+## 0.38.246 · pre-release
 
 - Settings: the snap layouts menu on the maximise button now shows (0.38.245's never did) (vSuite.Core 1.0.45).
 
