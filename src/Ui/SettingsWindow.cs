@@ -57,28 +57,33 @@ namespace vShell.Ui
                 CaptionHeight = 44, ResizeBorderThickness = new Thickness(6), CornerRadius = new CornerRadius(0),
                 GlassFrameThickness = new Thickness(0), UseAeroCaptionButtons = false
             });
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             ApplyChrome();
             BuildFrame();
 
             _barPanel = Page(PgBar);
             _widPanel = Page(PgWidget);
-            BuildAppearancePage();
+            // Appearance, Plugins and Notifications are built when they're shown (Navigate - fresh each time, as before); a bar's and a
+            // widget's page (their module strips and previews) when first opened. They used to be built here as well - Appearance, the
+            // heaviest, twice before the window showed.
             BuildDesktopPage();
             BuildStartupTab(Page(PgStartup));
-            BuildIntegrationsPage(Page(PgHa));
-            BuildNotificationsPage(Page(PgNotify));
             BuildSystemPage();
             BuildUpdatesPage();
             BuildAboutPage();
+            long pages = watch.ElapsedMilliseconds;
 
             if (S.Bars.Count > 0) _selBar = S.Bars[0];
             if (S.Widgets.Count > 0) _selWidget = S.Widgets[0];
-            LoadBar();
-            LoadWidget();
             RefreshColors();
             _loading = false;
             Navigate(PgAppearance);
-            ContentRendered += delegate { Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(LogLayout)); };
+            long shown = watch.ElapsedMilliseconds;
+            ContentRendered += delegate
+            {
+                Log.Write("Settings opened: built in " + shown + " ms (pages " + pages + " ms, Appearance " + (shown - pages) + " ms), on screen at " + watch.ElapsedMilliseconds + " ms");
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(LogLayout));
+            };
         }
 
         // =================================================================

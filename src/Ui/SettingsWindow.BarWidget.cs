@@ -23,8 +23,11 @@ namespace vShell.Ui
         // =================================================================
         // A bar's page
         // =================================================================
+        bool _barBuilt, _widgetBuilt;
+
         void LoadBar()
         {
+            _barBuilt = true;
             _loadedBar = _selBar;
             var p = _barPanel;
             p.Children.Clear();
@@ -199,6 +202,7 @@ namespace vShell.Ui
         // =================================================================
         void LoadWidget()
         {
+            _widgetBuilt = true;
             _loadedWidget = _selWidget;
             var p = _widPanel;
             p.Children.Clear();

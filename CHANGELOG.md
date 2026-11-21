@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.242
+
+- Settings opens quicker (pages built when they're shown, Appearance no longer twice) and drags smoothly (the page held as a picture while the window moves).
+
 ## 0.38.241 · release
 
 - Bars: a bar pushed up the screen by Windows' hidden taskbar after the monitors wake looks again until it can go back to the edge.

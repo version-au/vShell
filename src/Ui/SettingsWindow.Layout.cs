@@ -88,6 +88,25 @@ namespace vShell.Ui
         {
             base.OnSourceInitialized(e);
             ApplyGlass();
+            (PresentationSource.FromVisual(this) as HwndSource)?.AddHook(MoveHook);
+        }
+
+        const int WM_MOVING = 0x0216, WM_EXITSIZEMOVE = 0x0232;
+
+        /// <summary>
+        /// Dragging the window: the glass under it shows a new part of the wallpaper at every step, and WPF then drew the whole page over
+        /// it again each time - every row, the previews and their shadows (laggy). While it moves the page is kept as a picture (a bitmap
+        /// cache, at the resolution the page draws at - as sharp) and only the glass is drawn again; let go and the page is live again.
+        /// Resizing isn't touched (the page changes shape then anyway).
+        /// </summary>
+        IntPtr MoveHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (_frame == null) return IntPtr.Zero;
+            if (msg == WM_MOVING && _frame.CacheMode == null)
+                _frame.CacheMode = new BitmapCache { SnapsToDevicePixels = true };      // (scale 1 = as the page draws on this screen)
+            else if (msg == WM_EXITSIZEMOVE && _frame.CacheMode != null)
+                _frame.CacheMode = null;
+            return IntPtr.Zero;
         }
 
         /// <summary>A borderless window maximised hangs off the screen by its frame: keep the content on it. The max button's glyph follows.</summary>
@@ -225,6 +244,8 @@ namespace vShell.Ui
             else if (key == PgPlugin) BuildPluginPage();          // one plugin's own page
             else if (key == PgBars) BuildBarsList();              // the lists: summaries / shown may have changed elsewhere
             else if (key == PgWidgets) BuildWidgetsList();
+            else if (key == PgBar && (!_barBuilt || _loadedBar != _selBar)) LoadBar();           // a bar's page: built when first opened
+            else if (key == PgWidget && (!_widgetBuilt || _loadedWidget != _selWidget)) LoadWidget();
             _content.Content = Page(key);
             _content.ScrollToTop();
             RebuildNav();

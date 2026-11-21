@@ -3543,3 +3543,10 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 ## 0.38.241 - bars pushed up after the monitors wake
 1. Hard to make on purpose: it needs Explorer's hidden taskbar to hold its strip while the monitors wake (leave the PC until the screens sleep, then wake them). Afterwards the bottom bars sit on the bottom edge; if one was pushed in, the log has "pushed 48 px in from the edge by another app bar (Explorer's taskbars: …) - looking again for 2 minutes" and, once Explorer settles, "no longer pushed in - back at the edge" (or "Windows' hidden taskbar still holds …").
 2. Another app bar that really holds the edge (Hide the Windows taskbar off, the Windows taskbar showing): the bar sits above it as before; with Hide on, the log line once and nothing else changes after 2 minutes.
+
+## 0.38.242 - a quicker, smoother Settings window
+1. Open Settings (tray > Settings): it shows sooner than before. The log has "Settings opened: built in n ms (pages n ms, Appearance n ms), on screen at n ms" - send it if it still feels slow.
+2. Drag the window around by its top: the glass under it follows smoothly, the page doesn't stutter; let go - hover a row, it highlights at once (the page is live again); the text as sharp as before.
+3. Resize it by an edge: as before.
+4. Bars > a bar, Widgets > a widget: their pages (module strip and previews) open as before - the first time a moment to build. Change a module from a bar's right-click while Settings shows another page, then open that bar's page: it shows the change.
+5. Plugins, Notifications, Appearance: as before (each built when shown).
