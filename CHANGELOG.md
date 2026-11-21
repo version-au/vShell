@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.247
+## 0.38.247 · pre-release
 
 - A vProxy plugin: your vProxy's hosts and whether each app answers, its certificates and notifications on a bar or widget; open any host from the palette; your colours on vProxy's pages.
 
