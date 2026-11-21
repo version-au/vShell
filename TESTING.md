@@ -3573,3 +3573,11 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 ## 0.38.246 - snap layouts, read for real
 1. 0.38.245's steps 1-5 again: 0.38.245 never read Windows' setting (vSuite.Core 1.0.44's first check overflowed), so the button was always the plain one. Check: with Settings open, a WM_NCHITTEST sent to it at the maximise button's middle answers 9 (HTMAXBUTTON) with the setting on, 1 with it off.
 2. Automatic: vSuite.Tests `SnapLayoutsTests.windows_setting_is_read_the_first_time_then_every_few_seconds`.
+
+## 0.38.247 - the vProxy plugin (1.0.0)
+1. Settings › Plugins › vProxy: vProxy's address (port 8450) and an app key (vProxy: Options › Sign-in › Apps, vx_…) › Test: "vProxy 0.1.0 - 41 hosts · all answering · certificate 52 days". Send vShell's colours on: vProxy's pages take your theme.
+2. Add the vProxy module to a bar: dot + "vProxy · 41"; an app that doesn't answer: red dot and ⚠ 1; Caddy with a problem: red and "Caddy"; a certificate within 14 days, a test certificate or a host whose vDeploy service moved: amber. Click: the popup - tiles (answering, not, certificate days), the hosts that need you first; click a host = https://its name; right-click = its page in vProxy, copy its address, check every app now; Check now and Open vProxy buttons.
+3. In a widget: the same list (heading, only hosts that need you, where each goes, how many - in its settings).
+4. Notifications: in vProxy's Options › Notifications set a kind to vShell or Both; stop an app (or switch Caddy off) - within 30 s (5 with the module showing) the notification comes, as Problem; its answer again as Good. Older events aren't replayed when vShell starts.
+5. The palette: "Open vProxy", "Check every app behind vProxy", "Open sonarr.vrsion.xyz" for each host that's on.
+
