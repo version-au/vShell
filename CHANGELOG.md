@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.243
+
+- Settings: dragged across two monitors or past a screen's edge, the glass behind it keeps moving with it, each monitor's wallpaper where that monitor is (vSuite.Core 1.0.42).
+
 ## 0.38.242 · pre-release
 
 - Settings opens quicker (pages built when they're shown, Appearance no longer twice) and drags smoothly (the page held as a picture while the window moves).

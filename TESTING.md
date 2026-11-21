@@ -3550,3 +3550,9 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 3. Resize it by an edge: as before.
 4. Bars > a bar, Widgets > a widget: their pages (module strip and previews) open as before - the first time a moment to build. Change a module from a bar's right-click while Settings shows another page, then open that bar's page: it shows the change.
 5. Plugins, Notifications, Appearance: as before (each built when shown).
+
+## 0.38.243 - the glass across monitors and past an edge
+1. Settings (Blur, Frosted, or both off - the wallpaper as it is): drag it slowly across from one monitor to the next - the part on each monitor shows that monitor's wallpaper, and both parts keep moving with the window (it used to jump when the middle crossed).
+2. Drag it half off the left / right / bottom edge of a screen: the glass keeps moving with it (it used to stop at the edge).
+3. Drag it around one monitor: smooth, as 0.38.242; let go - the page is live (hover highlights) and sharp.
+4. Widgets dragged around (and across monitors): their glass follows too.
