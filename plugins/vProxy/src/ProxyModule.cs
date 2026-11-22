@@ -70,7 +70,7 @@ namespace VProxy
         {
             var b = new StringBuilder(OnlyNeeding + "|" + Count + "|" + ShowCount + "|" + _cfg.Title + "|" + s.Ok + s.Checked + s.Error + "|" + s.CaddyProblem + "|" + B.Get("ShowUpstream", true));
             foreach (VxCert c in s.Certs) b.Append('|').Append(c.Domain).Append(c.Has).Append(c.Staging).Append(c.DaysLeft);
-            foreach (VxHost h in s.Hosts) b.Append('|').Append(h.Id).Append(h.On).Append(h.Checked).Append(h.Answering).Append(h.Lost).Append(h.Upstream);
+            foreach (VxHost h in s.Hosts) b.Append('|').Append(h.Id).Append(h.On).Append(h.Checked).Append(h.Answering).Append(h.Watch).Append(h.Lost).Append(h.Upstream);
             return b.ToString();
         }
 
@@ -85,10 +85,10 @@ namespace VProxy
 
         Ellipse Dot(Brush b, double size = 8) { return new Ellipse { Width = size, Height = size, Fill = b, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) }; }
 
-        /// <summary>A host's dot: grey switched off or not checked yet, red not answering, amber lost in vDeploy, green answering.</summary>
+        /// <summary>A host's dot: grey switched off, not checked yet or away (not watched), red not answering, amber lost in vDeploy, green answering.</summary>
         Brush DotOf(VxHost h)
         {
-            if (!h.On || !h.Checked) return _t.FgDim;
+            if (!h.On || !h.Checked || h.Away) return _t.FgDim;
             if (!h.Answering) return StatusColors.Bad;
             return h.Lost.Length > 0 ? StatusColors.Warn : (Brush)StatusColors.Good;
         }
@@ -130,7 +130,7 @@ namespace VProxy
                 if (s.Ok)
                 {
                     var tiles = new StackPanel { Orientation = Orientation.Horizontal };
-                    tiles.Children.Add(Tile((s.On - s.Down).ToString(), "answering", StatusColors.Good, fs));
+                    tiles.Children.Add(Tile(s.Hosts.Count(h => h.On && h.Checked && h.Answering).ToString(), "answering", StatusColors.Good, fs));
                     tiles.Children.Add(Tile(s.Down.ToString(), "not", s.Down > 0 ? StatusColors.Bad : _t.FgDim, fs));
                     VxCert soon = s.Soonest;
                     tiles.Children.Add(Tile(soon == null ? "-" : soon.DaysLeft.ToString(), soon != null && soon.Staging ? "days (test)" : "cert days", soon == null || soon.Staging || soon.DaysLeft < 14 ? StatusColors.Warn : _t.FgDim, fs));
@@ -206,6 +206,7 @@ namespace VProxy
             TextBlock state;
             if (!h.On) state = T("off", _t.FgDim, fs - 1.5);
             else if (!h.Checked) state = T("checking…", _t.FgDim, fs - 1.5);
+            else if (h.Away) state = T("away", _t.FgDim, fs - 1.5);
             else if (!h.Answering) state = T("not answering", StatusColors.Bad, fs - 1.5);
             else if (h.Lost.Length > 0) state = T("vDeploy moved it", StatusColors.Warn, fs - 1.5);
             else state = T(h.Ms + " ms", _t.FgDim, fs - 1.5);

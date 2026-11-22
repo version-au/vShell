@@ -20,10 +20,14 @@ namespace VProxy
         public string Id = "", Name = "", Upstream = "", Why = "", From = "", Lost = "";
         public List<string> Names = new List<string>();
         public bool On = true, Checked, Answering;
+        /// <summary>vProxy tells you when it stops answering (vProxy 0.1.7; off for an app that comes and goes - a PC that sleeps).</summary>
+        public bool Watch = true;
         public int Ms;
         public DateTime SinceUtc;
 
-        public bool Down { get { return On && Checked && !Answering; } }
+        /// <summary>Not answering and watched: a problem (an unwatched one that's away isn't).</summary>
+        public bool Down { get { return On && Checked && !Answering && Watch; } }
+        public bool Away { get { return On && Checked && !Answering && !Watch; } }
 
         /// <summary>"answering · 9 ms", "not answering", "switched off", "checking…".</summary>
         public string StateText
@@ -32,7 +36,7 @@ namespace VProxy
             {
                 if (!On) return "switched off";
                 if (!Checked) return "checking…";
-                if (!Answering) return "not answering" + (Why.Length > 0 ? " - " + Why : "");
+                if (!Answering) return "not answering" + (Watch ? "" : " (not watched)") + (Why.Length > 0 ? " - " + Why : "");
                 return "answering · " + Ms + " ms";
             }
         }
@@ -153,7 +157,7 @@ namespace VProxy
                         var x = new VxHost
                         {
                             Id = JsonValue.Str(h, "id"), Upstream = JsonValue.Str(h, "upstream"), Why = JsonValue.Str(h, "why"),
-                            From = JsonValue.Str(h, "from"), Lost = JsonValue.Str(h, "lost"), On = JsonValue.Bool(h, "on", true), Ms = (int)JsonValue.Num(h, "ms"),
+                            From = JsonValue.Str(h, "from"), Lost = JsonValue.Str(h, "lost"), On = JsonValue.Bool(h, "on", true), Watch = JsonValue.Bool(h, "watch", true), Ms = (int)JsonValue.Num(h, "ms"),
                             SinceUtc = When(h, "since"),
                         };
                         if (h.TryGetProperty("names", out JsonElement names) && names.ValueKind == JsonValueKind.Array)

@@ -3581,3 +3581,6 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 4. Notifications: in vProxy's Options › Notifications set a kind to vShell or Both; stop an app (or switch Caddy off) - within 30 s (5 with the module showing) the notification comes, as Problem; its answer again as Good. Older events aren't replayed when vShell starts.
 5. The palette: "Open vProxy", "Check every app behind vProxy", "Open sonarr.vrsion.xyz" for each host that's on.
 
+## 0.38.248 - vProxy plugin 1.1.0: hosts that come and go
+1. With vProxy 0.1.7: Edit neptune in vProxy › Tell me when it stops answering off. With its PC off, the vProxy module shows no ⚠ for it, the dot stays the overall colour; in the popup / widget its dot is grey and its state says "away", it isn't listed first, "Only hosts that need you" leaves it out, and the "answering" tile doesn't count it. Its tooltip / state text says "not answering (not watched)".
+2. A watched host down: as before (red, ⚠ 1, listed first). An older vProxy (no "watch" in /overview): every host watched, as before.
