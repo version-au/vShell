@@ -34,7 +34,7 @@ namespace vShell.Ui
         bool _appBarRegistered, _placedOnce;
         /// <summary>Everything the last ApplyPlacement placed the bar by (null = place it whatever: something outside moved it).</summary>
         string _placedKey;
-        RECT _lastReserved;
+        RECT _lastReserved, _lastGranted;     // the strip last asked of ABM_SETPOS, and what Windows gave
         bool _hasLastReserved;
 
         readonly Border _root = new Border();
@@ -781,6 +781,7 @@ namespace vShell.Ui
                 _hasLastReserved = false;
             }
             _placedKey = null;               // placed again in full when the monitor is back
+            _ignoredTaskbar = false;         // and the stuck taskbar is looked at (and logged) afresh
             _hasPlacedWin = false;
             _placedOnce = false;
             BarRect = new RECT();            // nothing snaps or lines up with a hidden bar
@@ -897,13 +898,23 @@ namespace vShell.Ui
                     else _pushedSince = DateTime.MinValue;
                 }
                 if (top) abd.rc.Bottom = abd.rc.Top + reserve; else abd.rc.Top = abd.rc.Bottom - reserve;
-                if (!_hasLastReserved || !SameRect(abd.rc, _lastReserved))
+                RECT asked = abd.rc;
+                if (!_hasLastReserved || !SameRect(asked, _lastReserved))
                 {
                     Native.SHAppBarMessage(Native.ABM_SETPOS, ref abd);
-                    _lastReserved = abd.rc;
+                    _lastReserved = asked;        // what was asked for: the same again needs no new SETPOS
                     _hasLastReserved = true;
+                    _lastGranted = abd.rc;
+                    if (!_ignoredTaskbar && !SameRect(asked, _lastGranted) && _mgr.Settings.HideWindowsTaskbar && _pushedSince == DateTime.MinValue)
+                    {
+                        _pushedSince = DateTime.UtcNow;      // Explorer moving its taskbars between the two messages: CheckPlace looks again
+                        Log.Write("Bar '" + Placement.Edge + "': Windows gave a strip " + Math.Abs(top ? _lastGranted.Top - asked.Top : asked.Bottom - _lastGranted.Bottom) +
+                                  " px in from the one asked for (Explorer's taskbars: " + ShellServices.DescribeTaskbars() + ") - looking again for 2 minutes");
+                    }
                 }
-                rc = abd.rc;
+                // ABM_SETPOS steps in by the stuck taskbar's strip all over again (0.38.249: the bars sat 48 px up although ABM_QUERYPOS's push
+                // was ignored) - with the taskbar ignored the bar goes where it asked
+                rc = _ignoredTaskbar ? asked : _lastGranted;
             }
 
             int x;
@@ -971,7 +982,7 @@ namespace vShell.Ui
             // pushed in from the edge (see ApplyPlacement): ask Windows again every 5 s for the first 2 minutes
             var now = DateTime.UtcNow;
             bool lookAgain = _pushedSince != DateTime.MinValue && now - _pushedSince < TimeSpan.FromMinutes(2) && now - _lookedAgain >= TimeSpan.FromSeconds(5);
-            if (lookAgain) _lookedAgain = now;
+            if (lookAgain) { _lookedAgain = now; _hasLastReserved = false; }      // the strip asked for again, too
             if (own == null || monChanged || lookAgain || !StillWherePut()) { _placedKey = null; ApplyPlacement(); }
             if (lookAgain && _pushedSince == DateTime.MinValue) Log.Write("Bar '" + Placement.Edge + "': no longer pushed in - back at the edge");
         }

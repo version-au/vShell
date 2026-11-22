@@ -163,6 +163,7 @@ section (`NotifySection`, `KindPick`) + `Notify.Kinds` keys + `NotifyWatch.Hook`
   The real cause (0.38.216, the user's screenshot): Explorer re-makes the taskbar of a monitor that wakes up and can fail to auto-hide it
   ("A toolbar is already hidden on this side"): hidden by vShell, it still holds its strip, and ABM_QUERYPOS pushed the bar in by it -
   with Hide the Windows taskbar on, `ShellServices.ExplorerTaskbarOnEdge` makes ApplyPlacement ignore that push.
+  ABM_SETPOS pushes the strip in by it all over again (0.38.249): with the taskbar ignored the bar goes where it asked (`asked`), not where SETPOS said (`_lastGranted`).
 - **Layout loops**: never `Measure` children inside `ArrangeOverride` with a different size (TermTabsPanel did - froze layout past
   ~6 tabs). A bar's step-down fit uses the bar's room (layout slot), not the overfull panel's width (was an endless loop at start-up).
 - **Widget rows**: modules with `IMultiRow.RowCount == 0` size themselves and sit at the top of their row; others get fixed rows.

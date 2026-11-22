@@ -3584,3 +3584,9 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 ## 0.38.248 - vProxy plugin 1.1.0: hosts that come and go
 1. With vProxy 0.1.7: Edit neptune in vProxy › Tell me when it stops answering off. With its PC off, the vProxy module shows no ⚠ for it, the dot stays the overall colour; in the popup / widget its dot is grey and its state says "away", it isn't listed first, "Only hosts that need you" leaves it out, and the "answering" tile doesn't count it. Its tooltip / state text says "not answering (not watched)".
 2. A watched host down: as before (red, ⚠ 1, listed first). An older vProxy (no "watch" in /overview): every host watched, as before.
+
+## 0.38.249 - bottom bars stay at the edge when the hidden taskbar is stuck
+1. Hide the Windows taskbar on, bottom bars on each monitor. Turn the monitors off and on (or let them sleep) a few times, until the log says "Bar 'Bottom': Windows' hidden taskbar still holds 48 px of this edge (it couldn't auto-hide) - the bar stays at the edge". Every bottom bar is at the very bottom of its monitor - not 48 px up, sitting on the hidden taskbar's strip (0.38.248 left them there: Windows' ABM_SETPOS pushed them in again).
+2. The line shows again after each time the monitors come back (it was written only once a session before).
+3. If the log says "Windows gave a strip … in from the one asked for … looking again for 2 minutes": within 2 minutes the bar is back at the edge, or the log says "no longer pushed in - back at the edge".
+4. Without Hide the Windows taskbar, or with Reserve window space off: bars sit as before; maximised windows stop at the bar.

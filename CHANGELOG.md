@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.249
+
+- Bottom bars no longer sit a taskbar's height up the screen after the monitors wake up.
+
 ## 0.38.248 · release
 
 - vProxy plugin 1.1.0: a host vProxy doesn't watch (one that comes and goes) shows as away in grey, not as a problem.
