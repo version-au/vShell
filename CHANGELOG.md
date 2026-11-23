@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.250
+## 0.38.250 · release
 
 - The Notifications popup keeps to its monitor and scrolls (wheel or scrollbar), listing up to 100.
 
