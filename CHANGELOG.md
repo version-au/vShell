@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.251
+## 0.38.251 · release
 
 - Notifications from several apps about the same thing are one entry: the first pops up, the others join it quietly (Settings › Notifications › The same thing, once).
 - Back up closes the outage: one "nuc01 is back · down 4 min" instead of one from each app.
