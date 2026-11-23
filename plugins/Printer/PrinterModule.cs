@@ -163,6 +163,7 @@ namespace vShell.Ui
         void TogglePopup()
         {
             if (_popup != null && _popup.IsOpen) { _popup.CloseSafe(); _popup = null; return; }
+            Moonraker.Poke(null);      // a printer that was off is tried again now, not at its next (up to a minute away) try
             _popup = new PopupWindow(_mgr, _host, this, _t, new PrinterView(_mgr, _t, _cfg, 470));
             if (_mgr.Settings.WidgetStyle != null) _popup.UseWidgetStyle(_t, _mgr.Settings.WidgetStyle);
             _mgr.ShowPopup(_popup);

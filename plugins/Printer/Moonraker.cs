@@ -300,7 +300,8 @@ namespace vShell.Core
     /// <summary>
     /// 3D printers with Klipper + Moonraker (what Fluidd and Mainsail talk to): the print, temperatures, webcam, files, history, the job
     /// queue, Spoolman and power devices, and pause / resume / cancel / emergency stop / temperatures / start a print. Each printer is read
-    /// every 2 seconds while a module shows it, every 10 seconds otherwise when its notifications are on.
+    /// every 2 seconds while a module shows it, every 10 seconds otherwise when its notifications are on. One that can't be reached is
+    /// tried less and less often (up to once a minute); opening its panel tries it straight away.
     /// </summary>
     public static class Moonraker
     {
@@ -311,6 +312,8 @@ namespace vShell.Core
             public string HttpKey = "";
             public PrinterState Snap = new PrinterState();
             public int Busy;
+            /// <summary>Reads in a row that failed (the printer off): each waits longer before the next try, up to a minute.</summary>
+            public int Fails;
             public DateTime LastPoll = DateTime.MinValue, LastExtras = DateTime.MinValue, Retry = DateTime.MinValue;
             public List<string> HeaterNames = new List<string> { "extruder", "heater_bed" }, SensorNames = new List<string>(), LightNames = new List<string>();
             public readonly Dictionary<string, List<double>> Temps = new Dictionary<string, List<double>>();
@@ -603,11 +606,14 @@ namespace vShell.Core
                 now = Copy(prev);
                 now.Error = msg;
                 now.PrinterName = l.Conn.Shown;
-                l.Retry = DateTime.UtcNow.AddSeconds(shown ? 5 : 20);
+                // can't be reached (switched off): 5, 10, 20, 40 s, then once a minute (20, 40, 60 s with nothing showing it)
+                l.Fails++;
+                l.Retry = DateTime.UtcNow.AddSeconds(Math.Min(60, (shown ? 5 : 20) * Math.Pow(2, Math.Min(l.Fails - 1, 6))));
                 l.Snap = now;
                 Fire(Changed);
                 return;
             }
+            l.Fails = 0;
             l.Snap = now;
             if (prev.Ok) Compare(l, prev, now);
             Fire(Changed);

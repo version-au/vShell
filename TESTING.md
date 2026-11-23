@@ -3613,3 +3613,10 @@ Needs the updated plugins (Uptime Kuma 2.1.0, vDeploy 2.1.0, Proxmox, vProxy 1.2
 10. Something that isn't down / up (vPatch's "3 updates for nuc02", a Proxmox storage warning) is an ordinary notification, never joined.
 11. A third-party plugin built for 0.38.250 still loads and its notifications are as before. docs\plugins.md has NotifyAbout / Notify.SameThing; plugin-api.txt has 30 new lines, none gone (API version still 2).
 12. Kept in %APPDATA%\vShell\notifications.json (Thing, Names, Says, Open, Since, Back on joined ones) and notify-names.json (what was learned; forgotten after 30 days unseen).
+
+## 0.38.252 - a printer that's off is asked less often
+Needs the updated 3D printers plugin (built with this vShell).
+1. Switch the printer off (or Klipper / Moonraker) with a printer module on a bar: vProxy's log for its address (or the printer's own) shows vShell's /server/info tries spreading out - 5, 10, 20, 40 s apart, then once a minute (was every ~8 s for as long as it's off). With no printer module, only notifications: 20, 40 s, then once a minute.
+2. The module says "Can't reach it" as before; the log has one "Printer Neptune: …" line, not one per try.
+3. Click the module while the printer is off: the panel opens and it's tried straight away (one more request), then back to the slow tries.
+4. Switch the printer on: within a minute the module shows it (or at once when you open its panel), then every 2 s again while printing - temperatures and progress as before.
