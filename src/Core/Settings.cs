@@ -265,6 +265,18 @@ namespace vShell.Core
         /// <summary>The same notification again (same source, title and level) within this many minutes: one entry with a count ("×3"),
         /// its card updated instead of another one. 0 = off.</summary>
         public int NotifyCollapseMinutes { get; set; } = 10;
+        /// <summary>Notifications about the same thing (a plugin says what each is about - NotifyAbout) are one entry that grows.</summary>
+        public bool NotifySameOnce { get; set; } = true;
+        /// <summary>One about the same thing joins the last one within this many minutes (an outage still going is always joined).</summary>
+        public int NotifyJoinMinutes { get; set; } = 5;
+        /// <summary>"Back up" closes the outage's entry (green, "was down 4 min") instead of a notification of its own from each app.</summary>
+        public bool NotifyBackCloses { get; set; } = true;
+        /// <summary>A new outage's card waits this long (seconds); back by then = no card, a line in the history. 0 = straight away.</summary>
+        public int NotifyBlipSeconds { get; set; }
+        /// <summary>Names you said are the same thing, a line each: "printer, 192.168.2.40, Bambu X1C".</summary>
+        public List<string> NotifySame { get; set; } = new List<string>();
+        /// <summary>Sources whose notifications are never joined with others.</summary>
+        public List<string> NotifyApart { get; set; } = new List<string>();
 
         /// <summary>Listen for notifications sent by Home Assistant (or anything else) to http://this-pc:port/notify.</summary>
         public bool NotifyListen { get; set; } = false;
@@ -522,6 +534,11 @@ namespace vShell.Core
             if (!NotifyHistoryUp) { if (NotifyHistoryMax == 100) NotifyHistoryMax = 500; NotifyHistoryUp = true; }
             NotifyHistoryMax = Math.Max(10, Math.Min(5000, NotifyHistoryMax));
             NotifyCollapseMinutes = Math.Max(0, Math.Min(240, NotifyCollapseMinutes));
+            NotifyJoinMinutes = Math.Max(1, Math.Min(120, NotifyJoinMinutes));
+            NotifyBlipSeconds = Math.Max(0, Math.Min(600, NotifyBlipSeconds));
+            if (NotifySame == null) NotifySame = new List<string>();
+            NotifySame.RemoveAll(delegate (string x) { return string.IsNullOrWhiteSpace(x); });
+            if (NotifyApart == null) NotifyApart = new List<string>();
             if (NotifyQuietFrom == null) NotifyQuietFrom = "23:00";
             if (NotifyQuietTo == null) NotifyQuietTo = "07:00";
 

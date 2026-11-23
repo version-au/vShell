@@ -180,5 +180,15 @@ section (`NotifySection`, `KindPick`) + `Notify.Kinds` keys + `NotifyWatch.Hook`
   / `All` read vTerm's settings.json Connections. The old `Term*` fields stay in BarSettings for vTerm's first-start import. No terminal
   in widgets (Settings.Normalize removes a widget's Terminal module). Tests: `VSHELL_VTERM_EXE` = a built vTerm.exe; `VTERM_DATA_DIR`
   is honoured for the pipe and the settings file. Shutdown sends "quit-if-idle".
+- **The same thing, once** (0.38.251, V): `Notify.Post(…, NotifyAbout)` (plugin API) - a "down" about a thing that has an outage
+  still open (or one that closed within `NotifyJoinMinutes`) joins it: `NotifyItem.Says` (one line per app, its latest, in the order they
+  spoke), the card updated through `Notify.Updated` (no new card, no sound); 2+ apps retitle it "x is down" / "Uptime Kuma and vDeploy ·
+  since …". "Up" closes it (`Open` false, green, read, `Quietly` = card without the sound; a held card - `NotifyBlipSeconds` - not shown yet
+  = "dropped out for 40 s", no card); `Other` = an ordinary notification that keeps `Thing` / `Names`. Which names are one thing:
+  `NotifyNames` (src/Core/NotifyAbout.cs) - facts from each about, `Notify.SameThing` (plugins call it on every poll), DNS for local
+  names only (a public name can be the proxy's shared address), your lines (`NotifySame`); `Key` keeps a port (a service of its own),
+  drops scheme / path / 80 / 443; kept in notify-names.json, 30 days. `NotifyApart` = sources never joined. Lists: `NotifyCards.SourceDots`
+  / `SaysGrid`; a click on a joined row unfolds it (`NotifyList.Unfolded`). Plugins sending it: Uptime Kuma, vDeploy, Proxmox, vProxy,
+  vPatch, UniFi, PeaNUT. Not yet: folding what runs on a machine under it (vTrace's causes) - mock-up board 4.
 - **HTTP**: one cached `HttpClient` per integration; follow https -> http redirects manually where needed (`Moonraker.GetFollow`).
 - vShell is per-monitor DPI aware; window positions are device pixels (Win32), WPF sizes are DIPs.

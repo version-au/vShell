@@ -240,6 +240,13 @@ public sealed class MyServers : TilesModule
   (notifications), `PollNow()` after a change. `Start` / `Stop`.
 - `JsonValue.Num / Str / Bool(element, name)` - values from JSON without the checks (NaN / "" when missing).
 - `Notify.Post(…)` (a notification), `Log.Write(…)` (vShell's log), `TimeText.Clock / Stamp / Ago` (times as the user has them), `Secret`.
+- **Say what a notification is about** (vShell 0.38.251): `Notify.Post(source, title, detail, url, level, NotifyAbout.Down("nuc01", "192.168.2.133"))`
+  - its name as shown, then any other names and addresses it goes by (a URL is fine: `https://radarr.example.com`; an address with a
+  port is a service of its own). `NotifyAbout.Down` / `Up` / `Of` (something else - an update, a warning). When the user has
+  Settings › Notifications › The same thing, once on, a "down" from your plugin joins an outage another app already reported about the same
+  thing (one entry, its card updated quietly), and your "up" closes it ("nuc01 is back · down 4 min"). Plugins that know which names
+  go together (a host and its address) can say so without a notification: `Notify.SameThing(source, "nuc01", "192.168.2.133")` - cheap
+  to call on every poll. Without an about, a notification is as before.
 
 ## Sharing it, and updates
 

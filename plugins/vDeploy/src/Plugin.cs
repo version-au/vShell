@@ -145,6 +145,9 @@ namespace VDeploy
             Latest = snap;
             if (snap.Ok)
             {
+                // what each Docker host and Proxmox node is called and where it is: notifications about them from other apps join up
+                foreach (VdHost h in snap.Hosts) if (h.Name.Length > 0 && h.Address.Length > 0) Notify.SameThing(Source, h.Name, h.Address);
+                foreach (VdNode n in snap.Nodes) if (n.Name.Length > 0 && n.Address.Length > 0) Notify.SameThing(Source, n.Name, n.Address);
                 // the first look starts from now (nothing old is replayed). After that only as far as the events that actually came:
                 // a request that failed, or an answer with part of a long backlog, leaves the rest to be asked for again
                 if (_seen == null || snap.LastEvent < _seen.Value) _seen = snap.LastEvent;     // (lower: the server's numbers started again)
@@ -298,8 +301,25 @@ namespace VDeploy
             if (_settings == null || !VdSettings.Of(_settings).Notifications) return;
             string kind = !e.Ok ? KindProblem : e.Kind is "update" or "app-update" ? KindUpdate : KindGood;
             string url = e.Link.Length > 0 ? HomeUrl(e.Link) : HomeUrl("/activity");
-            try { Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null); }
+            try
+            {
+                NotifyAbout about = About(e);
+                if (about != null) Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), about);
+                else Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null);
+            }
             catch (Exception ex) { Log.Write("vDeploy: notify failed: " + ex.Message); }
+        }
+
+        /// <summary>What an event is about: its host (name and address) - down / back up for a host that stops or starts answering.</summary>
+        static NotifyAbout About(VdEvent e)
+        {
+            if (string.IsNullOrEmpty(e.Host)) return null;
+            string addr = "";
+            foreach (VdHost h in Latest.Hosts) if (string.Equals(h.Name, e.Host, StringComparison.OrdinalIgnoreCase)) { addr = h.Address; break; }
+            if (addr.Length == 0) foreach (VdNode n in Latest.Nodes) if (string.Equals(n.Name, e.Host, StringComparison.OrdinalIgnoreCase)) { addr = n.Address; break; }
+            if (e.Kind == "host-down") return NotifyAbout.Down(e.Host, addr);
+            if (e.Kind == "host-back") return NotifyAbout.Up(e.Host, addr);
+            return NotifyAbout.Of(e.Host, addr);
         }
 
         // ---------- vShell's colours on vDeploy's pages ----------

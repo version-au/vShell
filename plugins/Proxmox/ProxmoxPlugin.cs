@@ -180,6 +180,8 @@ namespace vShell.Ui
             PveSnapshot prev = _prev;
             if (prev != null && prev.Fetched == now.Fetched) return;
             _prev = now;
+            // each node's name and address: other apps' notifications about it join up
+            foreach (PveResource x in now.Items) if (x.Type == "node" && x.Name.Length > 0 && x.Ip.Length > 0) Notify.SameThing("Proxmox", x.Name, x.Ip);
             if (prev == null) { foreach (PveResource x in now.Storage(null)) if (c.NotifyStorage > 0 && x.DiskFraction * 100 >= c.NotifyStorage) Full.Add(x.Id); return; }
 
             var before = new Dictionary<string, PveResource>();
@@ -190,11 +192,11 @@ namespace vShell.Ui
                 if (!before.TryGetValue(x.Id, out b)) continue;
                 if (x.Type == "node" && c.NotifyNodes && b.Status != x.Status)
                 {
-                    string cluster = now.ClusterName, nodeName = x.Name;
+                    string cluster = now.ClusterName, nodeName = x.Name, nodeIp = x.Ip;
                     if (b.Running && !x.Running)
-                        DownDelay.Down("pve|" + x.Id, wait, delegate { Notify.Post("Proxmox", "Node " + nodeName + " is offline", cluster, web, Notify.KindOf("Proxmox.Problem")); });
+                        DownDelay.Down("pve|" + x.Id, wait, delegate { Notify.Post("Proxmox", "Node " + nodeName + " is offline", cluster, web, Notify.KindOf("Proxmox.Problem"), NotifyAbout.Down(nodeName, nodeIp)); });
                     else if (!b.Running && x.Running && DownDelay.Up("pve|" + x.Id) != UpResult.Cancelled)
-                        Notify.Post("Proxmox", "Node " + nodeName + " is back online", cluster, web, Notify.KindOf("Proxmox.Good"));
+                        Notify.Post("Proxmox", "Node " + nodeName + " is back online", cluster, web, Notify.KindOf("Proxmox.Good"), NotifyAbout.Up(nodeName, nodeIp));
                 }
                 else if (x.IsGuest && !x.Template && c.NotifyGuests && b.Status != x.Status)
                 {
@@ -202,11 +204,11 @@ namespace vShell.Ui
                     bool mine;
                     lock (ProxmoxClient.ByVShell) mine = ProxmoxClient.ByVShell.TryGetValue(x.Id, out by) && (DateTime.UtcNow - by).TotalMinutes < 5;
                     if (mine) continue;
-                    string what = x.Kind + " " + x.Label, where = "on " + x.Node;
+                    string what = x.Kind + " " + x.Label, where = "on " + x.Node, guest = x.Name.Length > 0 ? x.Name : x.Label;
                     if (b.Status == "running" && x.Status == "stopped")
-                        DownDelay.Down("pve|" + x.Id, wait, delegate { Notify.Post("Proxmox", what + " stopped", where, web, Notify.KindOf("Proxmox.Problem")); });
+                        DownDelay.Down("pve|" + x.Id, wait, delegate { Notify.Post("Proxmox", what + " stopped", where, web, Notify.KindOf("Proxmox.Problem"), NotifyAbout.Down(guest)); });
                     else if (b.Status != "running" && x.Status == "running" && DownDelay.Up("pve|" + x.Id) != UpResult.Cancelled)
-                        Notify.Post("Proxmox", what + " started", where, web, Notify.KindOf("Proxmox.Good"));     // a quick restart says nothing
+                        Notify.Post("Proxmox", what + " started", where, web, Notify.KindOf("Proxmox.Good"), NotifyAbout.Up(guest));     // a quick restart says nothing
                 }
                 else if (x.Type == "storage" && c.NotifyStorage > 0)
                 {

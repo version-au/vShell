@@ -3,6 +3,14 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.251
+
+- Notifications from several apps about the same thing are one entry: the first pops up, the others join it quietly (Settings › Notifications › The same thing, once).
+- Back up closes the outage: one "nuc01 is back · down 4 min" instead of one from each app.
+- Click a joined entry in the list for what each app said.
+- Uptime Kuma 2.1.0, vDeploy 2.1.0, Proxmox, vProxy 1.2.0, vPatch 1.2.0, UniFi and PeaNUT 2.2.0 say what their notifications are about.
+- Plugins can say what a notification is about too (NotifyAbout, Notify.SameThing in the plugin API).
+
 ## 0.38.250 · release
 
 - The Notifications popup keeps to its monitor and scrolls (wheel or scrollbar), listing up to 100.

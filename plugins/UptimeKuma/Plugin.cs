@@ -16,7 +16,7 @@ namespace UptimeKuma
     /// </summary>
     public sealed class Plugin : IPlugin
     {
-        Action<string, string, string, string> _notice;
+        Action<string, string, string, string, NotifyAbout> _notice;
 
         static string Needs(BarSettings s) { return KumaSettings.Of(s).Configured ? null : "Needs the Uptime Kuma connection (Plugins)"; }
 
@@ -46,11 +46,11 @@ namespace UptimeKuma
             host.AddNotifyKind("UptimeKuma.Up", NotifyLevel.Normal);
             host.AddNotifySource("Uptime Kuma");
             // the poller runs on a worker thread: notifications go out on vShell's own
-            _notice = delegate (string title, string detail, string url, string kind)
+            _notice = delegate (string title, string detail, string url, string kind, NotifyAbout about)
             {
                 Application app = Application.Current;
                 if (app == null) return;
-                app.Dispatcher.BeginInvoke(new Action(delegate { Notify.Post("Uptime Kuma", title, detail, url, Notify.KindOf(kind)); }));
+                app.Dispatcher.BeginInvoke(new Action(delegate { Notify.Post("Uptime Kuma", title, detail, url, Notify.KindOf(kind), about); }));
             };
             Kuma.Notice += _notice;
         }

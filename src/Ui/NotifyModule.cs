@@ -173,6 +173,8 @@ namespace vShell.Ui
     {
         public static bool MenuOpen;
         public static int Version;
+        /// <summary>Joined outages whose apps' lines are showing (shared by the bell's list, widgets and the history).</summary>
+        public static readonly HashSet<long> Unfolded = new HashSet<long>();
 
         /// <summary>The notifications a module lists (cfg null = all).</summary>
         public static List<NotifyItem> Pick(ModuleConfig cfg)
@@ -326,9 +328,25 @@ namespace vShell.Ui
             Grid.SetColumn(glyph, 1);
             g.Children.Add(glyph);
             var info = new StackPanel();
-            info.Children.Add(T(t, i.TitleShown, NotifyCards.TitleBrush(level, t), 0.92, !i.Read, true));
-            string sub = i.Source + (i.Detail.Length > 0 ? " · " + i.Detail : "");
+            bool joined = i.Joined;
+            bool unfolded = joined && Unfolded.Contains(i.Id);
+            TextBlock titleText = T(t, i.TitleShown, NotifyCards.TitleBrush(level, t), 0.92, !i.Read, true);
+            if (joined)
+            {
+                var head = new WrapPanel();
+                head.Children.Add(titleText);
+                head.Children.Add(NotifyCards.SourceDots(i));
+                info.Children.Add(head);
+            }
+            else info.Children.Add(titleText);
+            // a joined outage's detail already names its apps
+            string sub = joined ? i.Detail : i.Source + (i.Detail.Length > 0 ? " · " + i.Detail : "");
             info.Children.Add(T(t, sub, t.FgDim, 0.78, false, true));
+            if (unfolded) info.Children.Add(NotifyCards.SaysGrid(i, t, Math.Max(7, t.FontSize * 0.78), delegate (NotifySay say)
+            {
+                NotifyCards.OpenSay(mgr, i, say);
+                if (close != null) close();
+            }));
             ImageSource pic = NotifyCards.Picture(i.Image, 160);
             if (pic != null)
             {
@@ -367,8 +385,10 @@ namespace vShell.Ui
             var row = new Border
             {
                 Child = g, Padding = new Thickness(3, 3, 4, 3), CornerRadius = new CornerRadius(5), Background = Brushes.Transparent,
-                Cursor = i.Url.Length > 0 ? Cursors.Hand : Cursors.Arrow,
-                ToolTip = i.Kind + " · " + TimeText.Full(i.At.ToLocalTime()) + (i.Url.Length > 0 && !i.Url.StartsWith("vshell:") ? "\nClick: open " + i.Url : "") + "\nRight-click: remove"
+                Cursor = i.Url.Length > 0 || joined ? Cursors.Hand : Cursors.Arrow,
+                ToolTip = joined
+                    ? i.Kind + " · " + TimeText.Full(i.At.ToLocalTime()) + "\nClick: " + (unfolded ? "fold away" : "what each app said") + "\nRight-click: remove"
+                    : i.Kind + " · " + TimeText.Full(i.At.ToLocalTime()) + (i.Url.Length > 0 && !i.Url.StartsWith("vshell:") ? "\nClick: open " + i.Url : "") + "\nRight-click: remove"
             };
             row.MouseEnter += delegate { row.Background = t.Hover; };
             row.MouseLeave += delegate { row.Background = Brushes.Transparent; };
@@ -376,6 +396,15 @@ namespace vShell.Ui
             row.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e)
             {
                 e.Handled = true;
+                if (joined)
+                {
+                    // several apps: unfold what each said (each line opens its own page)
+                    if (!Unfolded.Remove(i.Id)) Unfolded.Add(i.Id);
+                    if (!i.Read) Notify.MarkRead(i.Id);
+                    Version++;
+                    Notify.Touch();
+                    return;
+                }
                 NotifyCards.Open(mgr, i);
                 if (i.Url.Length > 0 && close != null) close();
             };

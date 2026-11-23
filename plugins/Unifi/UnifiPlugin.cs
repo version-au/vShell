@@ -16,7 +16,7 @@ namespace vShell.Ui
     /// </summary>
     public sealed class UnifiPlugin : IPlugin
     {
-        Action<string, string, string> _netNotice;
+        Action<string, string, string, NotifyAbout> _netNotice;
         Action<PrEvent, string> _protectEvent;
         static BarManager _mgr;
         static readonly HashSet<string> _prSaid = new HashSet<string>();
@@ -55,11 +55,11 @@ namespace vShell.Ui
             foreach (string k in new[] { "Protect.Person", "Protect.Vehicle", "Protect.Package", "Protect.Animal", "Protect.Motion" }) host.AddNotifyKind(k, NotifyLevel.Normal);
             host.AddNotifySource("UniFi");
             host.AddNotifySource("Protect");
-            _netNotice = delegate (string kind, string title, string detail)
+            _netNotice = delegate (string kind, string title, string detail, NotifyAbout about)
             {
                 BarSettings s = _mgr.Settings;
                 if (s == null) return;
-                Notify.Post("UniFi", title, detail, Unifi.NetworkWeb(s), Notify.KindOf(kind));
+                Notify.Post("UniFi", title, detail, Unifi.NetworkWeb(s), Notify.KindOf(kind), about);
             };
             _protectEvent = delegate (PrEvent ev, string what) { ProtectNotice(ev, what); };
             Unifi.NetNotice += _netNotice;

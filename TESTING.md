@@ -3598,3 +3598,18 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 4. Scroll down and wait a minute (or let a new notification come in): the list is built again where you were, not back at the top.
 5. More than 100: the last line says "+ N older - in the history"; a click on it opens the notification history (the popup closes).
 6. Right-click a row (Mark as read / Remove / Copy) and click a row still work; Mark all read and Clear as before. In a widget, and the history window: as before.
+
+## 0.38.251 - the same thing, once (joined notifications)
+Needs the updated plugins (Uptime Kuma 2.1.0, vDeploy 2.1.0, Proxmox, vProxy 1.2.0, vPatch 1.2.0, UniFi, PeaNUT 2.2.0 - built with this vShell).
+1. Settings › Notifications: a row "The same thing, once" with a switch (on) and "One entry when apps tell you about the same thing · within 5 min · back up closes it". Its page: the switch, Join them when they come within (5 minutes), Back up closes it (on), A new outage's card waits (Off), These are the same, Which apps join in.
+2. Stop a machine several apps watch (a test LXC that Uptime Kuma monitors by its address and vDeploy has as a Docker host, or one in Proxmox): the first app to notice pops a card ("x is down", with the sound). When the next one notices, no new card and no sound - the same card's line changes to "x is down ● ●" and "Uptime Kuma and vDeploy · since 2:14 PM", with a line for what each app said under it. The bell's count goes up by one only.
+3. The bell's list: one entry with a dot per app; click it - it unfolds a line per app (its name, its words, the time); a click on one of those opens that app's page for it (and closes the list); click the entry again - it folds away. The same in a Notifications widget and the history window.
+4. Start the machine again: the entry turns green - "x is back · down 4 min", "2:14 PM – 2:18 PM · Uptime Kuma and vDeploy", marked read; a card shows it without the sound (if the red card is still up, its line turns green in place). The second app's "back up" adds nothing on screen.
+5. Back up closes it off: the entry still closes, and each app's own "back up" shows as before.
+6. A new outage's card waits 1 minute: stop and start something within a minute (after the plugins' own wait) - no card; the history has "x dropped out for 40 s" (read). Stopped longer: the card shows after the minute.
+7. These are the same: after the plugins have checked, rows like "nuc01 · 192.168.2.133 · From vDeploy, Proxmox" and "radarr.vrsion.xyz · http://192.168.2.3:7878 · From vProxy". Local names are looked up in DNS ("From DNS"); public names never are. Add "printer, 192.168.2.40" - a row "Added by you" with Remove; a notification about "printer" and one about 192.168.2.40 now join. Forget what was learned empties the learned rows (they come back as the plugins check again).
+8. Which apps join in: the plugins that have said what something is about; untick one - its notifications stay apart (each its own, as before).
+9. The switch off: every app's notification is its own, as in 0.38.250.
+10. Something that isn't down / up (vPatch's "3 updates for nuc02", a Proxmox storage warning) is an ordinary notification, never joined.
+11. A third-party plugin built for 0.38.250 still loads and its notifications are as before. docs\plugins.md has NotifyAbout / Notify.SameThing; plugin-api.txt has 30 new lines, none gone (API version still 2).
+12. Kept in %APPDATA%\vShell\notifications.json (Thing, Names, Says, Open, Since, Back on joined ones) and notify-names.json (what was learned; forgotten after 30 days unseen).

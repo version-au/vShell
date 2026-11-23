@@ -28,6 +28,8 @@ namespace vShell.Ui
             LinkRow(p, "", "Cards", CardsSummary(), null, delegate { OpenNotifyPart("cards"); });
             LinkRow(p, "", "Quiet times", QuietSummary(), null, delegate { OpenNotifyPart("quiet"); });
             LinkRow(p, "", "History", HistorySummary(), null, delegate { OpenNotifyPart("history"); });
+            LinkRow(p, "", "The same thing, once", SameSummary(), Switch(delegate { return S.NotifySameOnce; }, delegate (bool v) { S.NotifySameOnce = v; }, RebuildNotifications),
+                    delegate { OpenNotifyPart("same"); });
 
             Header(p, "What sends them");
             Action again = RebuildNotifications;
@@ -124,6 +126,13 @@ namespace vShell.Ui
                    (S.NotifyCollapseMinutes > 0 ? "repeats within " + S.NotifyCollapseMinutes + " min count as one" : "repeats kept separate");
         }
 
+        string SameSummary()
+        {
+            if (!S.NotifySameOnce) return "Off - each app's notification is its own";
+            return "One entry when apps tell you about the same thing  ·  within " + S.NotifyJoinMinutes + " min" + (S.NotifyBackCloses ? "  ·  back up closes it" : "") +
+                   (S.NotifyBlipSeconds > 0 ? "  ·  blips under " + Notify.Span(TimeSpan.FromSeconds(S.NotifyBlipSeconds)) + " skipped" : "");
+        }
+
         string ServicesSummary()
         {
             if (!S.NotifyServices) return "Off";
@@ -181,6 +190,7 @@ namespace vShell.Ui
                 case "services": title = "Service status"; break;
                 case "system": title = "System"; break;
                 case "weather": title = "Weather"; break;
+                case "same": title = "The same thing, once"; break;
                 default: title = "Cards"; break;
             }
             PageHeader(p, title, "Notifications  ›  " + title, Btn("‹  Back", delegate { Navigate(PgNotify); }));
@@ -196,6 +206,7 @@ namespace vShell.Ui
                     case "services": BuildNotifyServices(p); break;
                     case "system": BuildNotifySystem(p); break;
                     case "weather": BuildNotifyWeather(p); break;
+                    case "same": BuildNotifySame(p); break;
                     default: BuildNotifyCards(p); break;
                 }
             }
@@ -291,6 +302,117 @@ namespace vShell.Ui
             hist.Children.Add(clear);
             Place(p, hist);
             Note(p, "Add the Notifications module to a bar for a bell with the number of new ones (click it for the history), or to a widget for the list.");
+        }
+
+        // ---- the same thing, once: apps telling you about the same machine / app join one entry ----
+        static readonly string[] JoinChoices = { "2 minutes", "5 minutes", "10 minutes", "15 minutes", "30 minutes" };
+        static readonly string[] BlipChoices = { "Off", "30 seconds", "1 minute", "2 minutes", "5 minutes" };
+        static readonly int[] BlipSeconds = { 0, 30, 60, 120, 300 };
+
+        void BuildNotifySame(StackPanel p)
+        {
+            Header(p, "The same thing, once");
+            Check(p, "Join notifications about the same thing", delegate { return S.NotifySameOnce; }, delegate (bool v) { S.NotifySameOnce = v; },
+                  "When several apps tell you about the same machine or app (nuc01 down from Uptime Kuma, vDeploy and Proxmox), you get one entry that grows: " +
+                  "the first one pops up, the others join it quietly - no new card, no sound. Click it in the list for what each app said.");
+            ComboRow(p, "Join them when they come within", JoinChoices,
+                     delegate { return S.NotifyJoinMinutes + " minutes"; },
+                     delegate (string v) { int n; if (int.TryParse(v.Split(' ')[0], out n)) S.NotifyJoinMinutes = n; },
+                     "An outage still going is always joined, however long ago it started; this is for apps that are slow to notice, or late to say it's back.");
+            Check(p, "Back up closes it", delegate { return S.NotifyBackCloses; }, delegate (bool v) { S.NotifyBackCloses = v; },
+                  "One green \"nuc01 is back · down 4 min\" (marked read, no sound) instead of a \"back up\" from each app. Off: each app's own \"back up\" too.");
+            ComboRow(p, "A new outage's card waits", BlipChoices,
+                     delegate { int i = Array.IndexOf(BlipSeconds, S.NotifyBlipSeconds); return i >= 0 ? BlipChoices[i] : BlipChoices[0]; },
+                     delegate (string v) { int i = Array.IndexOf(BlipChoices, v); S.NotifyBlipSeconds = i >= 0 ? BlipSeconds[i] : 0; },
+                     "Back before then: no card at all, only \"nuc01 dropped out for 40 s\" in the history. Most plugins already wait before saying something is down " +
+                     "(their own \"Wait before saying it's down\"), so this is off unless you want more.");
+
+            Header(p, "These are the same");
+            Note(p, "vShell learns most of these by itself: from your plugins (each knows a machine's name and its address) and from DNS (local names only - " +
+                    "a public name like radarr.example.com can point at your proxy, shared by every site). Add the ones it can't work out: names and addresses, " +
+                    "separated by commas.");
+            var list = new StackPanel();
+            Action fill = null;
+            fill = delegate
+            {
+                list.Children.Clear();
+                List<NotifyNames.Thing> things = NotifyNames.All();
+                if (things.Count == 0) list.Children.Add(Txt("Nothing yet - it fills in as your plugins check things.", "vsDim", 12.5, false));
+                foreach (NotifyNames.Thing th in things)
+                {
+                    var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+                    var who = Txt(th.Mine ? "Added by you" : "From " + string.Join(", ", th.From), "vsDim", 12, false);
+                    who.Width = 170; who.TextTrimming = TextTrimming.CharacterEllipsis; who.ToolTip = string.Join(", ", th.From);
+                    DockPanel.SetDock(who, Dock.Right);
+                    if (th.Mine)
+                    {
+                        NotifyNames.Thing mine = th;
+                        var del = Btn("Remove", delegate
+                        {
+                            // the lines of yours with any of its names
+                            S.NotifySame.RemoveAll(delegate (string line)
+                            {
+                                foreach (string n in line.Split(',')) if (mine.Names.Exists(delegate (string x) { return NotifyNames.Key(x) == NotifyNames.Key(n); })) return true;
+                                return false;
+                            });
+                            _mgr.SettingsChanged();
+                            fill();
+                        });
+                        del.Margin = new Thickness(8, 0, 0, 0);
+                        DockPanel.SetDock(del, Dock.Right);
+                        row.Children.Add(del);
+                    }
+                    row.Children.Add(who);
+                    var name = Txt(NotifyNames.Shown(th), "vsFg", 12.5, true);
+                    name.Width = 150; name.TextTrimming = TextTrimming.CharacterEllipsis;
+                    DockPanel.SetDock(name, Dock.Left);
+                    row.Children.Add(name);
+                    var also = Txt(string.Join("  ·  ", th.Names.FindAll(delegate (string x) { return x != NotifyNames.Shown(th); })), "vsDim", 12, false);
+                    also.TextTrimming = TextTrimming.CharacterEllipsis;
+                    also.ToolTip = string.Join("\n", th.Names);
+                    row.Children.Add(also);
+                    list.Children.Add(row);
+                }
+            };
+            fill();
+            Place(p, list);
+            var add = new TextBox { MinWidth = 320 };
+            var addRow = new StackPanel { Orientation = Orientation.Horizontal };
+            addRow.Children.Add(add);
+            var addBtn = Btn("Add", delegate
+            {
+                var names = new List<string>();
+                foreach (string n in add.Text.Split(',')) if (n.Trim().Length > 0) names.Add(n.Trim());
+                if (names.Count < 2) return;
+                S.NotifySame.Add(string.Join(", ", names));
+                add.Text = "";
+                _mgr.SettingsChanged();
+                fill();
+            }, true);
+            addBtn.Margin = new Thickness(8, 0, 0, 0);
+            addRow.Children.Add(addBtn);
+            Place(p, Row("Add (for example: printer, 192.168.2.40, Bambu X1C)", addRow, true));
+            var tools = new WrapPanel();
+            tools.Children.Add(Btn("Look again now", delegate { fill(); }));
+            var forget = Btn("Forget what was learned", delegate { NotifyNames.Forget(); fill(); });
+            forget.Margin = new Thickness(8, 0, 0, 0);
+            tools.Children.Add(forget);
+            Place(p, tools);
+
+            Header(p, "Which apps join in");
+            List<string> sources = NotifyNames.Sources();
+            if (sources.Count == 0)
+                Note(p, "Plugins that say what their notifications are about show here once they've sent one or checked their things: Uptime Kuma, vDeploy, Proxmox, vProxy, UniFi, PeaNUT …");
+            else
+            {
+                Note(p, "Untick one to keep its notifications apart from the others.");
+                foreach (string src in sources)
+                {
+                    string source = src;
+                    Check(p, source, delegate { return !S.NotifyApart.Contains(source); },
+                          delegate (bool v) { S.NotifyApart.Remove(source); if (!v) S.NotifyApart.Add(source); });
+                }
+            }
         }
 
         /// <summary>

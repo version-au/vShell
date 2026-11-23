@@ -415,14 +415,14 @@ namespace VShellPeanut
                         string name = r.Server.Shown, why = r.Error;
                         DownDelay.Down(downKey, delay, delegate
                         {
-                            Notify.Post(Source, "Can't reach PeaNUT " + name, why, url, Notify.KindOf(KindDown));
+                            Notify.Post(Source, "Can't reach PeaNUT " + name, why, url, Notify.KindOf(KindDown), NotifyAbout.Down("PeaNUT " + name, url));
                         });
                     }
                     continue;   // stale readings: don't judge the UPSes on them
                 }
 
                 if (DownDelay.Up(downKey) == UpResult.WasNotified)
-                    Notify.Post(Source, "PeaNUT " + r.Server.Shown + " is back", Describe(r), url, Notify.KindOf(KindUp));
+                    Notify.Post(Source, "PeaNUT " + r.Server.Shown + " is back", Describe(r), url, Notify.KindOf(KindUp), NotifyAbout.Up("PeaNUT " + r.Server.Shown, url));
                 sw.Fails = 0;
                 sw.SawUp = true;
 

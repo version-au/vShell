@@ -7,7 +7,7 @@
     <AssemblyName>vShell.vPatch</AssemblyName>
     <RootNamespace>VPatch</RootNamespace>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <DebugType>none</DebugType>

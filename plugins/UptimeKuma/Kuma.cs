@@ -76,8 +76,8 @@ namespace UptimeKuma
         static int _delay;
         static Dictionary<string, MonitorState> _last;      // for notifications: what each monitor was at the last read
 
-        /// <summary>A notification to post (title, detail, url, kind key).</summary>
-        public static event Action<string, string, string, string> Notice;
+        /// <summary>A notification to post (title, detail, url, kind key, what it's about - null: nothing in particular).</summary>
+        public static event Action<string, string, string, string, NotifyAbout> Notice;
 
         /// <summary>The newest read (null = none yet). Reading it keeps the polling fast.</summary>
         public static KumaSnapshot Latest
@@ -199,15 +199,17 @@ namespace UptimeKuma
         // ---- notifications ----
         static void Compare(KumaSnapshot snap)
         {
-            Action<string, string, string, string> notice = Notice;
+            Action<string, string, string, string, NotifyAbout> notice = Notice;
             if (notice == null) return;
             // the server itself
             if (snap.Error != null)
             {
-                if (_notifyServer) DownDelay.Down("kuma:server", _delay, delegate { notice("Can't reach Uptime Kuma", snap.Error, DashboardUrl, "UptimeKuma.Down"); });
+                if (_notifyServer) DownDelay.Down("kuma:server", _delay, delegate { notice("Can't reach Uptime Kuma", snap.Error, DashboardUrl, "UptimeKuma.Down", NotifyAbout.Down("Uptime Kuma", _url)); });
                 return;     // keep _last: monitors aren't "back" just because the server is
             }
-            if (DownDelay.Up("kuma:server") == UpResult.WasNotified && _notifyServer) notice("Uptime Kuma can be reached again", "", DashboardUrl, "UptimeKuma.Up");
+            if (DownDelay.Up("kuma:server") == UpResult.WasNotified && _notifyServer) notice("Uptime Kuma can be reached again", "", DashboardUrl, "UptimeKuma.Up", NotifyAbout.Up("Uptime Kuma", _url));
+            // each monitor's name and what it watches: other apps' notifications about the same machine or site join up
+            foreach (KumaMonitor m in snap.Monitors) if (m.Url.Length > 0) Notify.SameThing("Uptime Kuma", m.Name, m.Url);
 
             Dictionary<string, MonitorState> last = _last;
             var now = new Dictionary<string, MonitorState>(StringComparer.Ordinal);
@@ -221,10 +223,10 @@ namespace UptimeKuma
                 string key = "kuma:" + m.Name;
                 KumaMonitor mon = m;
                 if (m.State == MonitorState.Down && was != MonitorState.Down)
-                    DownDelay.Down(key, _delay, delegate { notice(mon.Name + " is down", Detail(mon), DashboardUrl, "UptimeKuma.Down"); });
+                    DownDelay.Down(key, _delay, delegate { notice(mon.Name + " is down", Detail(mon), DashboardUrl, "UptimeKuma.Down", NotifyAbout.Down(mon.Name, mon.Url)); });
                 else if (m.State == MonitorState.Up && was != MonitorState.Up)
                 {
-                    if (DownDelay.Up(key) == UpResult.WasNotified) notice(m.Name + " is back up", Detail(m), DashboardUrl, "UptimeKuma.Up");
+                    if (DownDelay.Up(key) == UpResult.WasNotified) notice(m.Name + " is back up", Detail(m), DashboardUrl, "UptimeKuma.Up", NotifyAbout.Up(m.Name, m.Url));
                 }
             }
         }

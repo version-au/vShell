@@ -277,18 +277,35 @@ NoteLook :: new()
 NoteRender :: static Brush Contrast(Brush)
 NoteRender :: static void Open(string)
 Notify :: event Action<NotifyItem> ItemRead
+Notify :: static NotifyItem Post(string, string, string, string, NotifyLevel, NotifyAbout)
 Notify :: static NotifyItem Post(string, string, string, string, NotifyLevel, bool, string, string, bool, DateTime)
 Notify :: static NotifyItem Post(string, string, string, string, NotifyLevel, bool?, string?)
 Notify :: static NotifyItem Post(string, string, string, string, bool, bool?)
 Notify :: static NotifyLevel KindOf(string)
 Notify :: static readonly Dictionary<string, NotifyLevel> Kinds
 Notify :: static void MarkReadByRef(string)
+Notify :: static void SameThing(string, string[])
+NotifyAbout (class)
+NotifyAbout :: List<string> All()
+NotifyAbout :: List<string> Also { get; set; }
+NotifyAbout :: NotifyState State { get; set; }
+NotifyAbout :: new()
+NotifyAbout :: static NotifyAbout Down(string, string[])
+NotifyAbout :: static NotifyAbout Of(string, string[])
+NotifyAbout :: static NotifyAbout Up(string, string[])
+NotifyAbout :: string Name { get; set; }
 NotifyCards :: static ImageSource Picture(string, int)
 NotifyItem (class)
 NotifyItem :: DateTime At { get; set; }
+NotifyItem :: DateTime Back { get; set; }
+NotifyItem :: DateTime Since { get; set; }
+NotifyItem :: List<NotifySay> Says { get; set; }
+NotifyItem :: List<string> Names { get; set; }
 NotifyItem :: NotifyLevel Kind { get; }
 NotifyItem :: bool Bad { get; set; }
+NotifyItem :: bool Joined { get; }
 NotifyItem :: bool Keep
+NotifyItem :: bool Open { get; set; }
 NotifyItem :: bool Read { get; set; }
 NotifyItem :: int Count { get; set; }
 NotifyItem :: long Id { get; set; }
@@ -298,6 +315,7 @@ NotifyItem :: string Image { get; set; }
 NotifyItem :: string Level { get; set; }
 NotifyItem :: string Ref { get; set; }
 NotifyItem :: string Source { get; set; }
+NotifyItem :: string Thing { get; set; }
 NotifyItem :: string Title { get; set; }
 NotifyItem :: string TitleShown { get; }
 NotifyItem :: string Url { get; set; }
@@ -305,6 +323,18 @@ NotifyLevel (enum : int)
 NotifyLevel :: const NotifyLevel Alert = 2
 NotifyLevel :: const NotifyLevel Important = 1
 NotifyLevel :: const NotifyLevel Normal = 0
+NotifySay (class)
+NotifySay :: DateTime At { get; set; }
+NotifySay :: new()
+NotifySay :: string Detail { get; set; }
+NotifySay :: string Source { get; set; }
+NotifySay :: string State { get; set; }
+NotifySay :: string Title { get; set; }
+NotifySay :: string Url { get; set; }
+NotifyState (enum : int)
+NotifyState :: const NotifyState Down = 1
+NotifyState :: const NotifyState Other = 0
+NotifyState :: const NotifyState Up = 2
 Palette :: static void RaiseChanged()
 Palette+Source (delegate : MulticastDelegate)
 Palette+Source :: new(object, IntPtr)

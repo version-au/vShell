@@ -131,6 +131,8 @@ namespace VPatch
             Latest = snap;
             if (snap.Ok)
             {
+                // each host's name and address: notifications about it from other apps join up
+                foreach (VpHost h in snap.Hosts) if (h.Name.Length > 0 && h.Address.Length > 0) Notify.SameThing(Source, h.Name, h.Address);
                 // the first look starts from now (older events aren't replayed). After that only as far as the events that actually
                 // came: a request that failed, or an answer with part of a long backlog, leaves the rest to be asked for again
                 if (_seen == null || snap.LastEvent < _seen.Value) _seen = snap.LastEvent;     // (lower: the server's numbers started again)
@@ -209,8 +211,24 @@ namespace VPatch
             // by vPatch's kind first (a security update is "warn", not a problem); "bad" looks are problems
             string kind = e.Group == "security" ? KindSecurity : e.Look == "bad" || e.Group == "failed" ? KindProblem : e.Group == "updates" || e.Group == "restart" ? KindUpdates : KindGood;
             string url = e.Link.Length > 0 ? HomeUrl(e.Link) : HomeUrl("/activity");
-            try { Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null); }
+            try
+            {
+                NotifyAbout about = About(e);
+                if (about != null) Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), about);
+                else Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null);
+            }
             catch (Exception ex) { Log.Write("vPatch: notify failed: " + ex.Message); }
+        }
+
+        /// <summary>What an event is about: its host (name and address) - down / back up when it stops or starts answering.</summary>
+        static NotifyAbout About(VpEvent e)
+        {
+            if (string.IsNullOrEmpty(e.Host)) return null;
+            VpHost h = Latest.Hosts.Find(delegate (VpHost x) { return string.Equals(x.Name, e.Host, StringComparison.OrdinalIgnoreCase); });
+            string addr = h != null ? h.Address : "";
+            if (e.Kind == "down") return NotifyAbout.Down(e.Host, addr);
+            if (e.Kind == "back") return NotifyAbout.Up(e.Host, addr);
+            return NotifyAbout.Of(e.Host, addr);
         }
 
         // ---------- vShell's colours on vPatch's pages ----------

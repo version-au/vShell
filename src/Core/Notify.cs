@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace vShell.Core
 {
@@ -53,6 +54,24 @@ namespace vShell.Core
         public string Ref { get; set; } = "";
         /// <summary>Kept in the history (feedback such as "added to SABnzbd" is shown only).</summary>
         [System.Text.Json.Serialization.JsonIgnore] public bool Keep = true;
+
+        // ---- about something (NotifyAbout): notifications from different apps about the same thing are one entry ----
+        /// <summary>What it's about, as shown ("nuc01"); "" = nothing in particular.</summary>
+        public string Thing { get; set; } = "";
+        /// <summary>Every name and address it went by.</summary>
+        public List<string> Names { get; set; }
+        /// <summary>What each app said (an outage: one line per app, its latest); null = an ordinary notification.</summary>
+        public List<NotifySay> Says { get; set; }
+        /// <summary>An outage still going (down, not back yet).</summary>
+        public bool Open { get; set; }
+        /// <summary>When it went down, and came back (UTC; MinValue = not yet).</summary>
+        public DateTime Since { get; set; }
+        public DateTime Back { get; set; }
+        /// <summary>Several apps said it (the lines under it show what each said).</summary>
+        [System.Text.Json.Serialization.JsonIgnore] public bool Joined { get { return Says != null && Says.Count > 1; } }
+
+        /// <summary>Its card shows without the sound (an outage that closed); its card has been shown (a held new outage's hasn't).</summary>
+        internal bool Quietly, CardShown;
     }
 
     /// <summary>
@@ -73,12 +92,14 @@ namespace vShell.Core
         public static event Action<NotifyItem> Show;
         /// <summary>The history changed (added, read, cleared).</summary>
         public static event Action Changed;
+        /// <summary>A notification changed quietly (another app joined an outage): its card is updated if it's showing - no new card, no sound.</summary>
+        public static event Action<NotifyItem> Updated;
         /// <summary>A notification with a Ref was read here (clicked, its card closed, Mark all read): tell where it came from.</summary>
         [PluginApi] public static event Action<NotifyItem> ItemRead;
         /// <summary>Set by the UI: is a full-screen app (game, video) in front.</summary>
         public static Func<bool> FullScreenNow;
 
-        public static void Configure(BarSettings s) { _s = s; Load(); }
+        public static void Configure(BarSettings s) { _s = s; Load(); NotifyNames.Configure(s); }
 
         /// <summary>The sorts of notification whose kind can be picked on the Notifications page: key, and the kind they have by default.</summary>
         [PluginApi] public static readonly Dictionary<string, NotifyLevel> Kinds = new Dictionary<string, NotifyLevel>
@@ -229,8 +250,176 @@ namespace vShell.Core
             return item;
         }
 
+        // =================================================================
+        // About something: one entry per outage, whichever apps say so
+        // =================================================================
+
+        /// <summary>
+        /// Raise a notification about something (NotifyAbout: its names, and whether it's down / back up). With Settings > Notifications >
+        /// The same thing, once on, a "down" from another app about the same thing joins the outage already there (its card updated quietly,
+        /// no new one), and "back up" closes it ("nuc01 is back · down 4 min"). Other states are ordinary notifications that keep the names.
+        /// </summary>
+        [PluginApi] public static NotifyItem Post(string source, string title, string detail, string url, NotifyLevel level, NotifyAbout about)
+        {
+            if (about == null || about.Name.Length == 0) return Post(source, title, detail, url, level);
+            Load();
+            source = source ?? ""; title = title ?? ""; detail = detail ?? ""; url = url ?? "";
+            List<string> names = about.All();
+            NotifyNames.Learn(source, names);
+            BarSettings s = _s;
+            bool join = s == null || (s.NotifySameOnce && (s.NotifyApart == null || !s.NotifyApart.Contains(source)));
+            if (!join || about.State == NotifyState.Other) return Stamp(Post(source, title, detail, url, level), about, names);
+
+            DateTime now = DateTime.UtcNow;
+            TimeSpan window = TimeSpan.FromMinutes(s != null ? s.NotifyJoinMinutes : 5);
+            var say = new NotifySay { Source = source, Title = title, Detail = detail, Url = url, At = now, State = about.State.ToString() };
+            NotifyItem outage = null;
+            lock (Gate)
+                foreach (NotifyItem h in _history)
+                {
+                    if (h.Says == null) continue;
+                    if (!h.Open && now - h.At > window) { if (now - h.At > TimeSpan.FromDays(2)) break; continue; }
+                    if (NotifyNames.Same(h.Names, names)) { outage = h; break; }
+                }
+
+            if (about.State == NotifyState.Down)
+            {
+                if (outage != null && outage.Open)
+                {
+                    lock (Gate)
+                    {
+                        Tell(outage, say, names);
+                        if (level > outage.Kind) { outage.Level = level.ToString(); outage.Bad = level == NotifyLevel.Alert; }
+                        if (outage.Joined) { outage.Title = outage.Thing + " is down"; outage.Detail = Who(outage) + " · since " + TimeText.Clock(outage.Since.ToLocalTime()); }
+                        outage.At = now;
+                        _history.Remove(outage);
+                        _history.Insert(0, outage);
+                    }
+                    SaveSoon(); Fire(Changed); UpdateCard(outage);
+                    return outage;
+                }
+                // a new outage
+                var item = new NotifyItem
+                {
+                    At = now, Source = source, Title = title, Detail = detail, Url = url, Level = level.ToString(), Bad = level == NotifyLevel.Alert,
+                    Thing = about.Name, Names = new List<string>(names), Says = new List<NotifySay> { say }, Open = true, Since = now, Back = DateTime.MinValue
+                };
+                Add(item, s);
+                int blip = s != null ? s.NotifyBlipSeconds : 0;
+                if (blip <= 0) ShowOrHold(item, s);
+                else
+                    Task.Delay(TimeSpan.FromSeconds(blip)).ContinueWith(delegate { if (item.Open && !item.CardShown) ShowOrHold(item, _s); });
+                return item;
+            }
+
+            // back up
+            if (outage == null) return Stamp(Post(source, title, detail, url, level), about, names);
+            if (!outage.Open)
+            {
+                // another app saying it's back, after the outage closed: a line under it, nothing on screen
+                lock (Gate) Tell(outage, say, names);
+                SaveSoon(); Fire(Changed); UpdateCard(outage);
+                return outage;
+            }
+            bool closes = s == null || s.NotifyBackCloses;
+            // back before its held card showed (Settings: a new outage's card waits): a blip - no card at all
+            TimeSpan down = now - outage.Since;
+            int wait = s != null ? s.NotifyBlipSeconds : 0;
+            bool shown = outage.CardShown || wait <= 0 || down.TotalSeconds > wait + 5;
+            lock (Gate)
+            {
+                Tell(outage, say, names);
+                outage.Open = false;
+                outage.Back = now;
+                if (!shown) outage.Title = outage.Thing + " dropped out for " + Span(down);
+                else outage.Title = outage.Thing + " is back · down " + Span(down);
+                outage.Detail = TimeText.Clock(outage.Since.ToLocalTime()) + " – " + TimeText.Clock(now.ToLocalTime()) + " · " + Who(outage);
+                outage.Level = level.ToString(); outage.Bad = level == NotifyLevel.Alert;
+                outage.Url = url.Length > 0 ? url : outage.Url;
+                outage.Read = true;           // over: nothing to read
+                outage.At = now;
+                _history.Remove(outage);
+                _history.Insert(0, outage);
+            }
+            SaveSoon(); Fire(Changed);
+            if (!shown) return outage;                         // a blip: back before its card showed - no card at all
+            if (closes) { outage.Quietly = true; string why; if (Quiet(s, out why)) UpdateCard(outage); else ShowNow(outage); }
+            else { UpdateCard(outage); Stamp(Post(source, title, detail, url, level), about, names); }
+            return outage;
+        }
+
+        /// <summary>Lists showing the history draw it again (a joined entry unfolded).</summary>
+        public static void Touch() { Fire(Changed); }
+
+        /// <summary>A plugin knows these names are one thing (vDeploy: a host and its address) - without a notification.</summary>
+        [PluginApi] public static void SameThing(string source, params string[] names) { NotifyNames.Learn(source, names); }
+
+        static NotifyItem Stamp(NotifyItem item, NotifyAbout about, List<string> names)
+        {
+            if (item == null || item.Says != null) return item;
+            lock (Gate) { item.Thing = about.Name; item.Names = new List<string>(names); }
+            return item;
+        }
+
+        /// <summary>One app's word on an outage: its line (replacing what it said before), and any names it adds.</summary>
+        static void Tell(NotifyItem outage, NotifySay say, List<string> names)
+        {
+            int at = outage.Says.FindIndex(delegate (NotifySay x) { return x.Source == say.Source; });
+            if (at >= 0) outage.Says[at] = say;          // its line keeps its place (the apps stay in the order they spoke)
+            else outage.Says.Add(say);
+            if (outage.Names == null) outage.Names = new List<string>();
+            foreach (string n in names) if (!outage.Names.Contains(n)) outage.Names.Add(n);
+        }
+
+        /// <summary>"Uptime Kuma, vDeploy and Proxmox".</summary>
+        public static string Who(NotifyItem item)
+        {
+            var l = new List<string>();
+            if (item.Says != null) foreach (NotifySay x in item.Says) if (!l.Contains(x.Source)) l.Add(x.Source);
+            if (l.Count == 0) return item.Source;
+            if (l.Count == 1) return l[0];
+            return string.Join(", ", l.GetRange(0, l.Count - 1)) + " and " + l[l.Count - 1];
+        }
+
+        /// <summary>"40 s", "4 min", "1 h 12 min".</summary>
+        public static string Span(TimeSpan t)
+        {
+            if (t.TotalSeconds < 60) return Math.Max(1, (int)Math.Round(t.TotalSeconds)) + " s";
+            if (t.TotalMinutes < 60) return (int)Math.Round(t.TotalMinutes) + " min";
+            int h = (int)t.TotalHours, m = t.Minutes;
+            return h + " h" + (m > 0 ? " " + m + " min" : "");
+        }
+
+        static void Add(NotifyItem item, BarSettings s)
+        {
+            int max = s != null ? s.NotifyHistoryMax : 100;
+            lock (Gate)
+            {
+                item.Id = _nextId++;
+                _history.Insert(0, item);
+                if (_history.Count > max) _history.RemoveRange(max, _history.Count - max);
+            }
+            SaveSoon(); Fire(Changed);
+        }
+
+        static void ShowOrHold(NotifyItem item, BarSettings s)
+        {
+            string why;
+            item.CardShown = true;          // held counts: it shows when the quiet time ends
+            if (Quiet(s, out why)) { lock (Gate) if (!Held.Contains(item)) Held.Add(item); return; }
+            ShowNow(item);
+        }
+
+        /// <summary>Its card is updated where it is (if it's showing) - nothing new pops up.</summary>
+        static void UpdateCard(NotifyItem item)
+        {
+            Action<NotifyItem> a = Updated;
+            if (a != null) try { a(item); } catch (Exception ex) { Log.Write("Notification card: " + ex.Message); }
+        }
+
         static void ShowNow(NotifyItem item)
         {
+            item.CardShown = true;
             Action<NotifyItem> a = Show;
             if (a != null) try { a(item); } catch (Exception ex) { Log.Write("Notification card: " + ex.Message); }
         }

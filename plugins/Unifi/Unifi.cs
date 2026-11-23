@@ -225,7 +225,7 @@ namespace vShell.Core
         /// <summary>A Protect event has started or changed (rings, detections, motion), and which detection is new in it ("ring", "person" ...).</summary>
         public static event Action<PrEvent, string> ProtectEvent;
         /// <summary>A UniFi Network notice: (key in Notify.Kinds, title, detail).</summary>
-        public static event Action<string, string, string> NetNotice;
+        public static event Action<string, string, string, NotifyAbout> NetNotice;
 
         public static bool NetConfigured(BarSettings s) { if (s == null) return false; UnSettings u = UnSettings.Of(s); return !string.IsNullOrWhiteSpace(u.Url) && !string.IsNullOrEmpty(u.NetKeyPlain); }
         public static bool ProtectConfigured(BarSettings s) { if (s == null) return false; UnSettings u = UnSettings.Of(s); return !string.IsNullOrWhiteSpace(u.Url) && !string.IsNullOrEmpty(u.ProtectKeyPlain); }
@@ -550,7 +550,7 @@ namespace vShell.Core
         static void CompareNet(UnSnapshot a, UnSnapshot b, BarSettings s)
         {
             UnSettings u = UnSettings.Of(s);
-            Action<string, string, string> n = NetNotice;
+            Action<string, string, string, NotifyAbout> n = NetNotice;
             if (n == null || !a.Ok) return;
             if (u.NotifyDevices)
                 foreach (UnDevice d in b.Devices)
@@ -559,8 +559,8 @@ namespace vShell.Core
                     if (was == null) continue;
                     string title = Nice(d.Kind == "ap" ? "Access point" : d.Kind) + " " + d.Name + " is offline", detail = d.Model + (d.Ip.Length > 0 ? " · " + d.Ip : "");
                     // held for the wait you set; back before then (a restart / firmware update) = nothing said
-                    if (was.Online && !d.Online) DownDelay.Down("unifi|" + d.Id, u.NotifyDelay, delegate { Try(n, "UniFi.DeviceDown", title, detail); });
-                    else if (!was.Online && d.Online && DownDelay.Up("unifi|" + d.Id) != UpResult.Cancelled) Try(n, "UniFi.DeviceUp", d.Name + " is back online", d.Model);
+                    if (was.Online && !d.Online) DownDelay.Down("unifi|" + d.Id, u.NotifyDelay, delegate { Try(n, "UniFi.DeviceDown", title, detail, NotifyAbout.Down(d.Name, d.Ip)); });
+                    else if (!was.Online && d.Online && DownDelay.Up("unifi|" + d.Id) != UpResult.Cancelled) Try(n, "UniFi.DeviceUp", d.Name + " is back online", d.Model, NotifyAbout.Up(d.Name, d.Ip));
                 }
             if (u.NotifyNewClient)
                 foreach (UnClient c in b.Clients)
@@ -579,7 +579,7 @@ namespace vShell.Core
                 }
         }
 
-        static void Try(Action<string, string, string> n, string k, string t, string d) { try { n(k, t, d); } catch { } }
+        static void Try(Action<string, string, string, NotifyAbout> n, string k, string t, string d, NotifyAbout about = null) { try { n(k, t, d, about); } catch { } }
 
         // ---- Protect ----
         static PrSnapshot ReadProtect(BarSettings s)

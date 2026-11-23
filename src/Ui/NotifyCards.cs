@@ -38,6 +38,15 @@ namespace vShell.Ui
                 catch { return false; }
             };
             Notify.Show += delegate (NotifyItem item) { ui.BeginInvoke(new Action(delegate { Add(item); })); };
+            // another app joined an outage (or said it's back after it closed): its line is updated if a card shows it - nothing new pops up
+            Notify.Updated += delegate (NotifyItem item)
+            {
+                ui.BeginInvoke(new Action(delegate
+                {
+                    NotifyCard showing = Cards.Find(delegate (NotifyCard c) { return c.IsLoaded && c.HasLine(item.Id); });
+                    if (showing != null) { showing.UpdateLine(item); Relayout(); }
+                }));
+            };
             _tick = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2) };
             _tick.Tick += delegate
             {
@@ -73,7 +82,9 @@ namespace vShell.Ui
                 card.AddLine(item);
                 if (fresh) card.Show();
                 Relayout();
-                if (s.NotifySound) try { PlaySound("Notification.Default", IntPtr.Zero, 0x00010000 | 0x0001 | 0x0002); } catch { }   // SND_ALIAS | SND_ASYNC | SND_NODEFAULT
+                bool quietly = item.Quietly;
+                item.Quietly = false;
+                if (s.NotifySound && !quietly) try { PlaySound("Notification.Default", IntPtr.Zero, 0x00010000 | 0x0001 | 0x0002); } catch { }   // SND_ALIAS | SND_ASYNC | SND_NODEFAULT
             }
             catch (Exception ex) { Log.Write("Notification card: " + ex.Message); }
         }
@@ -194,6 +205,83 @@ namespace vShell.Ui
                 if (!ws.ShowShadow) card.Effect = null;
             }
             return card;
+        }
+
+        static readonly Brush[] SourceColours = MakeSourceColours();
+        static Brush[] MakeSourceColours()
+        {
+            string[] hex = { "#A6E3A1", "#89B4FA", "#FAB387", "#CBA6F7", "#94E2D5", "#F9E2AF", "#F5C2E7", "#74C7EC" };
+            var l = new Brush[hex.Length];
+            for (int i = 0; i < hex.Length; i++) { var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex[i])); b.Freeze(); l[i] = b; }
+            return l;
+        }
+
+        /// <summary>A colour of its own for each app (the same every time): the dots on an outage several apps reported.</summary>
+        public static Brush SourceBrush(string source)
+        {
+            int h = 0;
+            foreach (char c in source ?? "") h = unchecked(h * 31 + c);
+            return SourceColours[(h & 0x7fffffff) % SourceColours.Length];
+        }
+
+        /// <summary>A dot per app that reported it ("nuc01 is down ● ● ●").</summary>
+        public static StackPanel SourceDots(NotifyItem item)
+        {
+            var dots = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
+            var seen = new List<string>();
+            if (item.Says != null)
+                foreach (NotifySay x in item.Says)
+                {
+                    if (seen.Contains(x.Source)) continue;
+                    seen.Add(x.Source);
+                    dots.Children.Add(new System.Windows.Shapes.Ellipse { Width = 7, Height = 7, Fill = SourceBrush(x.Source), Margin = new Thickness(0, 0, 3, 0), ToolTip = x.Source });
+                }
+            dots.ToolTip = Notify.Who(item);
+            return dots;
+        }
+
+        /// <summary>What each app said, a line each: its dot, its name, its words, when.</summary>
+        public static Grid SaysGrid(NotifyItem item, Theme t, double size, Action<NotifySay> click)
+        {
+            var g = new Grid { Margin = new Thickness(0, 5, 0, 1) };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            int row = 0;
+            if (item.Says == null) return g;
+            foreach (NotifySay x in item.Says)
+            {
+                NotifySay say = x;
+                g.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var dot = new System.Windows.Shapes.Ellipse { Width = 6, Height = 6, Fill = SourceBrush(x.Source), Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
+                var who = new TextBlock { Text = x.Source, Foreground = t.Fg, FontFamily = t.Font, FontSize = size, Margin = new Thickness(0, 0, 8, 0) };
+                string words = x.Title + (x.Detail.Length > 0 ? " · " + x.Detail : "");
+                var what = new TextBlock { Text = words, Foreground = t.FgDim, FontFamily = t.Font, FontSize = size, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = words };
+                var when = new TextBlock { Text = TimeText.Clock(x.At.ToLocalTime()), Foreground = t.FgDim, FontFamily = t.Font, FontSize = size * 0.92, Margin = new Thickness(8, 0, 0, 0), Opacity = 0.8 };
+                FrameworkElement[] cells = { dot, who, what, when };
+                for (int c = 0; c < cells.Length; c++)
+                {
+                    Grid.SetRow(cells[c], row); Grid.SetColumn(cells[c], c);
+                    g.Children.Add(cells[c]);
+                }
+                if (click != null && x.Url.Length > 0)
+                    foreach (FrameworkElement el in new FrameworkElement[] { who, what })
+                    {
+                        el.Cursor = Cursors.Hand;
+                        el.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
+                        el.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; click(say); };
+                    }
+                row++;
+            }
+            return g;
+        }
+
+        /// <summary>Open what one app said (its own page for it).</summary>
+        public static void OpenSay(BarManager mgr, NotifyItem item, NotifySay say)
+        {
+            if (item.Id > 0) Notify.MarkRead(item.Id);
+            Open(mgr, new NotifyItem { Url = say.Url });
         }
 
         /// <summary>The glyph for a source.</summary>
@@ -341,15 +429,27 @@ namespace vShell.Ui
             var text = new StackPanel();
             line.Children.Add(text);
             if (item.Url.Length > 0) { line.Cursor = Cursors.Hand; line.ToolTip = item.Url.StartsWith("vshell:") ? "Click to " + (item.Url == "vshell:history" ? "open the history" : item.Url == "vshell:restart" ? "restart vShell" : item.Url.StartsWith("vshell:ha-toggle") ? "toggle it" : "open it") : "Open " + item.Url; }
-            text.Children.Add(new TextBlock
+            var titleText = new TextBlock
             {
                 Text = item.TitleShown, FontFamily = _t.Font, FontSize = 12.5, TextWrapping = TextWrapping.Wrap,
                 Foreground = NotifyCards.TitleBrush(level, _t)
-            });
+            };
+            if (item.Joined)
+            {
+                // several apps said it: a dot each after the title
+                var head = new WrapPanel();
+                head.Children.Add(titleText);
+                head.Children.Add(NotifyCards.SourceDots(item));
+                text.Children.Add(head);
+            }
+            else text.Children.Add(titleText);
             string detail = item.Detail;
-            if (_source.Length == 0 && item.Source.Length > 0) detail = item.Source + (detail.Length > 0 ? " · " + detail : "");
+            if (_source.Length == 0 && item.Source.Length > 0 && !item.Joined) detail = item.Source + (detail.Length > 0 ? " · " + detail : "");
             if (!string.IsNullOrEmpty(detail))
                 text.Children.Add(new TextBlock { Text = detail, FontFamily = _t.Font, FontSize = 11.5, Foreground = _t.FgDim, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 1, 0, 0) });
+            // an outage still going that several apps reported: what each said
+            if (item.Joined && item.Open)
+                text.Children.Add(NotifyCards.SaysGrid(item, _t, 11, delegate (NotifySay say) { NotifyCards.OpenSay(_mgr, item, say); }));
             // a picture (a Protect camera snapshot) under the text
             ImageSource pic = NotifyCards.Picture(item.Image, 280);
             if (pic != null)

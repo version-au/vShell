@@ -127,6 +127,8 @@ namespace VProxy
             Latest = snap;
             if (snap.Ok)
             {
+                // each host's names and its app's address: Uptime Kuma's monitor of radarr.example.com joins vProxy's "radarr's app isn't answering"
+                foreach (VxHost h in snap.Hosts) if (h.Name.Length > 0) Notify.SameThing(Source, Names(h));
                 // the first look starts from now (older events aren't replayed); after that only as far as the events that came
                 if (_seen == null || snap.LastEvent < _seen.Value) _seen = snap.LastEvent;
                 else if (events != null)
@@ -176,8 +178,33 @@ namespace VProxy
             if (_settings == null || !VxSettings.Of(_settings).Notifications) return;
             string kind = e.Look == "bad" || e.Look == "warn" ? KindProblem : KindGood;
             string url = e.Link.Length > 0 ? HomeUrl(e.Link) : HomeUrl("/activity");
-            try { Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null); }
+            try
+            {
+                NotifyAbout about = About(e);
+                if (about != null) Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), about);
+                else Notify.Post(Source, e.Title, e.Detail, url, Notify.KindOf(kind), true, null);
+            }
             catch (Exception ex) { Log.Write("vProxy: notify failed: " + ex.Message); }
+        }
+
+        /// <summary>A host's names, then its app's address.</summary>
+        static string[] Names(VxHost h)
+        {
+            var l = new List<string> { h.Name };
+            foreach (string n in h.Names) if (n.Length > 0 && !l.Contains(n)) l.Add(n);
+            if (h.Upstream.Length > 0) l.Add(h.Upstream);
+            return l.ToArray();
+        }
+
+        /// <summary>What an event is about: its host - down / back up when its app stops or starts answering.</summary>
+        static NotifyAbout About(VxEvent e)
+        {
+            if (string.IsNullOrEmpty(e.Host)) return null;
+            VxHost h = Latest.Hosts.Find(delegate (VxHost x) { return string.Equals(x.Name, e.Host, StringComparison.OrdinalIgnoreCase) || x.Names.Contains(e.Host); });
+            string[] also = h != null ? Names(h) : new string[0];
+            if (e.Kind == "down") return NotifyAbout.Down(e.Host, also);
+            if (e.Kind == "back") return NotifyAbout.Up(e.Host, also);
+            return NotifyAbout.Of(e.Host, also);
         }
 
         // ---------- vShell's colours on vProxy's pages ----------
