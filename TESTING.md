@@ -3590,3 +3590,11 @@ A bar's CPU module, Dots, Show clock speed + Show temperature on; Settings > the
 2. The line shows again after each time the monitors come back (it was written only once a session before).
 3. If the log says "Windows gave a strip … in from the one asked for … looking again for 2 minutes": within 2 minutes the bar is back at the edge, or the log says "no longer pushed in - back at the edge".
 4. Without Hide the Windows taskbar, or with Reserve window space off: bars sit as before; maximised windows stop at the bar.
+
+## 0.38.250 - the Notifications popup scrolls
+1. A Notifications module on a top bar with many notifications (more than fit on the screen): click it. The popup ends above the monitor's bottom edge (a small gap), its heading (title, Mark all read, Clear, History) stays at the top, and the list scrolls - the mouse wheel over it, or drag the thin scrollbar on its right.
+2. The same on a bottom bar: the popup never goes past the monitor's top edge.
+3. A few notifications: the popup is only as tall as they are, no scrollbar.
+4. Scroll down and wait a minute (or let a new notification come in): the list is built again where you were, not back at the top.
+5. More than 100: the last line says "+ N older - in the history"; a click on it opens the notification history (the popup closes).
+6. Right-click a row (Mark as read / Remove / Copy) and click a row still work; Mark all read and Clear as before. In a widget, and the history window: as before.

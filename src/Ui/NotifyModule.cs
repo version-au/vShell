@@ -60,7 +60,7 @@ namespace vShell.Ui
             else
             {
                 Child = BuildBar();
-                if (_popup != null && _popup.IsOpen) _popup.SetContent(NotifyList.Build(_mgr, _t, _cfg, false, delegate { if (_popup != null) _popup.CloseSafe(); }));
+                if (_popup != null && _popup.IsOpen) _popup.SetContent(PopupList());
             }
             _host.ContentChanged();
         }
@@ -140,12 +140,26 @@ namespace vShell.Ui
         {
             if (_popup != null && _popup.IsOpen) { _popup.CloseSafe(); _popup = null; return; }
             if (PopupWindow.ClosedJustNow(this)) { _popup = null; return; }     // this click's press already closed it
-            _popup = new PopupWindow(_mgr, _host, this, _t, NotifyList.Build(_mgr, _t, _cfg, false, delegate { if (_popup != null) _popup.CloseSafe(); }));
+            _popupList = null;
+            _popup = new PopupWindow(_mgr, _host, this, _t, new Border());
             if (_mgr.Settings.WidgetStyle != null) _popup.UseWidgetStyle(_t, _mgr.Settings.WidgetStyle);
+            _popup.SetContent(PopupList());          // after the style: its room on the monitor counts the card's padding
             _mgr.ShowPopup(_popup);
             // seen now (an option: by default they stay unread until you mark them - the ✓ on each, or Mark all read)
             PopupWindow p = _popup;
             if (_cfg.NfReadOnClose) p.Closed += delegate { MarkShownRead(); };
+        }
+
+        FrameworkElement _popupList;
+
+        /// <summary>The popup's list: no taller than the room between the bar and its monitor's far edge, the rows scrolling - and built
+        /// again (a new one, a minute on) where it was scrolled to.</summary>
+        FrameworkElement PopupList()
+        {
+            var old = _popupList != null ? _popupList.Tag as ScrollViewer : null;
+            double offset = old != null ? old.VerticalOffset : 0;
+            _popupList = NotifyList.Build(_mgr, _t, _cfg, false, delegate { if (_popup != null) _popup.CloseSafe(); }, _popup != null ? _popup.ContentRoom() : double.PositiveInfinity, offset);
+            return _popupList;
         }
 
         void MarkShownRead()
@@ -183,14 +197,40 @@ namespace vShell.Ui
             return Pills.Make(t, "", text, tip, false, click);
         }
 
-        public static FrameworkElement Build(BarManager mgr, Theme t, ModuleConfig cfg, bool widget, Action close)
+        /// <summary>The bar's popup keeps at most this many (the rest: + N older, a click opens the history).</summary>
+        const int PopupMost = 100;
+
+        /// <summary>
+        /// The list. The bar's popup (not a widget, a module's cfg): 400 wide, at most `room` tall (PopupWindow.ContentRoom) with the
+        /// heading staying put and the rows scrolling (wheel or scrollbar), scrolled to `offset`; the ScrollViewer is its Tag.
+        /// </summary>
+        public static FrameworkElement Build(BarManager mgr, Theme t, ModuleConfig cfg, bool widget, Action close, double room = double.PositiveInfinity, double offset = 0)
         {
             var root = new StackPanel();
-            // the bar's popup: a fixed width; the history window: as wide as its card (a fixed width there pushed Clear off the edge)
-            if (!widget && cfg != null) { root.Width = 400; root.Margin = new Thickness(4); }
+            Panel list = root;
+            FrameworkElement result = root;
+            bool popup = !widget && cfg != null;
+            if (popup)
+            {
+                // the bar's popup: a fixed width; the history window: as wide as its card (a fixed width there pushed Clear off the edge)
+                list = new StackPanel();
+                var scroll = new ScrollViewer { Content = list, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Focusable = false };
+                WidgetWindow.StyleScrollbars(scroll);
+                scroll.Resources["wThumb"] = Theme.Faded(t.FgDim, 70);
+                if (offset > 0) scroll.Loaded += delegate { scroll.ScrollToVerticalOffset(offset); };
+                var grid = new Grid { Width = 400, Margin = new Thickness(4), Tag = scroll };
+                if (!double.IsInfinity(room)) grid.MaxHeight = Math.Max(120, room - 8);     // less its margin
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                Grid.SetRow(scroll, 1);
+                grid.Children.Add(root);
+                grid.Children.Add(scroll);
+                result = grid;
+            }
             List<NotifyItem> items = Pick(cfg);
             int count = cfg != null ? cfg.NfCount : 30;
             if (!widget) count = Math.Max(count, 15);
+            if (popup) count = PopupMost;          // it scrolls: all of them, up to a point
 
             var head = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
             var buttons = new StackPanel { Orientation = Orientation.Horizontal };
@@ -229,8 +269,8 @@ namespace vShell.Ui
             {
                 var none = T(t, "No notifications.", t.FgDim, 0.9);
                 none.Margin = new Thickness(2, 2, 0, 4);
-                root.Children.Add(none);
-                return root;
+                list.Children.Add(none);
+                return result;
             }
             DateTime lastDay = DateTime.MinValue;
             int n = 0;
@@ -238,9 +278,21 @@ namespace vShell.Ui
             {
                 if (n++ >= count)
                 {
-                    var more = T(t, "+ " + (items.Count - count) + " older", t.FgDim, 0.82);
+                    var more = T(t, "+ " + (items.Count - count) + " older" + (popup ? " - in the history" : ""), t.FgDim, 0.82);
                     more.Margin = new Thickness(4, 3, 0, 0);
-                    root.Children.Add(more);
+                    if (popup)
+                    {
+                        more.Cursor = Cursors.Hand;
+                        more.ToolTip = "Open the notification history";
+                        more.MouseLeftButtonDown += delegate (object s, MouseButtonEventArgs e) { e.Handled = true; };
+                        more.MouseLeftButtonUp += delegate (object s, MouseButtonEventArgs e)
+                        {
+                            e.Handled = true;
+                            if (close != null) close();
+                            NotifyHistoryWindow.ShowNear(mgr);
+                        };
+                    }
+                    list.Children.Add(more);
                     break;
                 }
                 DateTime day = i.At.ToLocalTime().Date;
@@ -248,12 +300,12 @@ namespace vShell.Ui
                 {
                     var dh = T(t, day == DateTime.Today ? "Today" : day == DateTime.Today.AddDays(-1) ? "Yesterday" : day.ToString("dddd d MMM"), t.FgDim, 0.8, true);
                     dh.Margin = new Thickness(2, lastDay == DateTime.MinValue ? 0 : 6, 0, 2);
-                    root.Children.Add(dh);
+                    list.Children.Add(dh);
                     lastDay = day;
                 }
-                root.Children.Add(Row(mgr, t, i, close));
+                list.Children.Add(Row(mgr, t, i, close));
             }
-            return root;
+            return result;
         }
 
         public static FrameworkElement Row(BarManager mgr, Theme t, NotifyItem i, Action close)

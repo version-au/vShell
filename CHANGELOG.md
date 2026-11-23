@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.250
+
+- The Notifications popup keeps to its monitor and scrolls (wheel or scrollbar), listing up to 100.
+
 ## 0.38.249 · release
 
 - Bottom bars no longer sit a taskbar's height up the screen after the monitors wake up.
