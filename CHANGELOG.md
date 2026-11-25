@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.253
+
+- Claude usage 2.1.1: "a limit is getting close" tells you once per window, not every few minutes.
+
 ## 0.38.252 · release
 
 - 3D printers: a printer that's switched off is tried less and less often, up to once a minute (was every few seconds); opening its panel tries it at once.

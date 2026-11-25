@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.1.1 (2026-11-25)
+- Fix: "a limit is getting close" said it again every few minutes. Each limit now tells you once when it gets close, and once more when it's reached (if that's switched on).
+
 ## 2.1.0 (2026-11-18)
 - Meter style Dots: a row of dots filling up as the limit is used (needs vShell 0.38.227 - an older vShell draws the bar).
 

@@ -216,7 +216,35 @@ namespace ClaudeUsage
             return true;
         }
 
+        // A window is known by its limit and when it resets. Anthropic's reset time moves by a second or so from one check to the
+        // next (24 "getting close" notices for one 5-hour window), so a reset time within half an hour of a marked one is the same
+        // window - a new window always resets hours later.
+        static readonly long SameWindow = TimeSpan.FromMinutes(30).Ticks;
+
         static string Period(Limit l) { return l.Key + "|" + (l.ResetsUtc.HasValue ? l.ResetsUtc.Value.Ticks.ToString() : "0"); }
+
+        /// <summary>Whether "what" (close / reached / reset) was already said for this limit's window.</summary>
+        static bool Marked(HashSet<string> sent, string what, Limit l)
+        {
+            string prefix = what + "|" + l.Key + "|";
+            if (!l.ResetsUtc.HasValue) return sent.Contains(prefix + "0");
+            long at = l.ResetsUtc.Value.Ticks;
+            foreach (string k in sent)
+            {
+                if (!k.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                long t;
+                if (long.TryParse(k.Substring(prefix.Length), out t) && t != 0 && Math.Abs(t - at) <= SameWindow) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Marks "what" as said for this limit's window; false if it already was.</summary>
+        static bool Mark(HashSet<string> sent, string what, Limit l)
+        {
+            if (Marked(sent, what, l)) return false;
+            sent.Add(what + "|" + Period(l));
+            return true;
+        }
 
         static HashSet<string> Sent(SettingsBag b)
         {
@@ -248,20 +276,19 @@ namespace ClaudeUsage
             foreach (Limit l in s.Limits)
             {
                 if (!Watched(l, b) || l.HasReset(now)) continue;
-                string period = Period(l);
                 if (l.Percent >= 100)
                 {
-                    if (sent.Add("reached|" + period))
+                    if (Mark(sent, "reached", l))
                     {
                         dirty = true;
-                        sent.Add("close|" + period);
+                        Mark(sent, "close", l);
                         if (b.Get("NotifyReached", true))
                             Post(KindReached, "Claude " + l.Name.ToLowerInvariant() + " limit reached", ResetLine(l, true));
                     }
                 }
                 else if (l.Percent >= closeAt)
                 {
-                    if (sent.Add("close|" + period))
+                    if (Mark(sent, "close", l))
                     {
                         dirty = true;
                         if (b.Get("NotifyClose", true))
@@ -289,9 +316,8 @@ namespace ClaudeUsage
                 if (!l.HasReset(now) || l.Percent < 100 || !Watched(l, b)) continue;
                 any = true;
                 if (sent == null) sent = Sent(b);
-                string period = Period(l);
-                if (!sent.Contains("reached|" + period)) continue;
-                if (sent.Add("reset|" + period))
+                if (!Marked(sent, "reached", l)) continue;
+                if (Mark(sent, "reset", l))
                 {
                     dirty = true;
                     if (b.Get("NotifyReset", true))

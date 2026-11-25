@@ -3620,3 +3620,12 @@ Needs the updated 3D printers plugin (built with this vShell).
 2. The module says "Can't reach it" as before; the log has one "Printer Neptune: …" line, not one per try.
 3. Click the module while the printer is off: the panel opens and it's tried straight away (one more request), then back to the slow tries.
 4. Switch the printer on: within a minute the module shows it (or at once when you open its panel), then every 2 s again while printing - temperatures and progress as before.
+
+## 0.38.253 - Claude usage: "getting close" once per window
+Needs the updated Claude usage plugin (2.1.1, built with this vShell).
+1. Settings › Notifications › Claude usage: A limit is getting close on, Close means set just under your 5-hour use now (e.g. 5 % below the module's number).
+2. Within a few minutes one "Claude 5-hour limit at N%" notification shows. Leave it running for half an hour (the plugin checks every few minutes): no more of them, even as the percent climbs (before, one came with nearly every check - Anthropic's reset time moves by a second between checks).
+3. Restart vShell: still no repeat for that window.
+4. A limit is reached on: when the 5-hour limit hits 100 % one "limit reached" notification shows, once. Off: nothing at 100 %.
+5. After the window resets (A limit I reached has reset on): one "has reset" notification; the next window's "getting close" comes once again when it gets there.
+6. %APPDATA%\vShell\settings.json, Integrations › claudeusage › Sent: one close| line per window (the old repeated lines from before go after 8 days).
