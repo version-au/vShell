@@ -5,6 +5,7 @@ Newest first. The heading must start with `## ` and the version number exactly a
 
 ## 0.38.253
 
+- Signed with the developer's code-signing certificate: Windows shows who made the app and its installer instead of "Unknown publisher".
 - Claude usage 2.1.1: "a limit is getting close" tells you once per window, not every few minutes.
 
 ## 0.38.252 · release

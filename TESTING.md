@@ -11,6 +11,13 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.253 - signed with the Certum certificate
+1. Before building: SimplySign Desktop connected (its tray icon > Connect, the code from the phone). `build.cmd` says "Signed: vShell.exe",
+   then Inno Setup signs the setup and its uninstaller. Not connected: a local build says "Building unsigned"; `build.cmd upload` stops.
+2. dist\setup\vShell-setup.exe and the app: right-click > Properties > Digital Signatures - the Certum certificate, with a timestamp.
+   Run the setup: Windows names the publisher (not "Unknown publisher"). After installing, the uninstaller in the app's folder is signed too.
+3. An update from the update site still installs (the site's SHA-256 is of the signed files).
+
 ## Start menu module (added after v0.3)
 
 9. **Start menu** - Settings -> Bars -> Add module -> "Start menu". Click the button: a menu opens above (bottom bar) or below (top bar) it, centred on the button and kept on screen. Programs appear A-Z; icons fill in a moment after it opens. Store apps appear a few seconds after the very first open (they are read from PowerShell's Get-StartApps; if none ever appear, check the log).

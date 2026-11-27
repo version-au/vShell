@@ -15,6 +15,10 @@
 #define AppVer RemoveFileExt(GetVersionNumbersString(SourceExe))
 
 [Setup]
+; signed with the Certum certificate when build.cmd signs (/DSIGN /Svsuite=...sign.cmd): the setup and its uninstaller
+#ifdef SIGN
+SignTool=vsuite
+#endif
 AppId={{6E1B6C2A-3F7D-4C1E-9B5A-7D2E8F4A1C30}
 AppName=vShell
 AppVersion={#AppVer}
