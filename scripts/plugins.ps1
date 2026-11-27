@@ -38,6 +38,17 @@ function Put($dll, $key) {
   $script:state[$dll] = @($dll, $key, $release)
 }
 
+# signed with the Certum certificate when build.cmd / plugins.cmd sign (their SIGN / SIGNREQ): before its checksum, so the site's is the
+# signed file's. Your own plugins only - others' (third-party\) stay as their authors made them. sign.ps1 exit 2 = no certificate, not
+# required: unsigned (a local build); 1 = failed.
+function Sign($file) {
+  if ($env:SIGN -ne '1') { return }
+  $args2 = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'vSuite.Core\scripts\sign.ps1')
+  if ($env:SIGNREQ) { $args2 += '-Require' }
+  & powershell @args2 $file
+  if ($LASTEXITCODE -eq 2) { $env:SIGN = ''; return }
+  if ($LASTEXITCODE -ne 0) { Write-Host ''; Write-Host "PLUGIN SIGNING FAILED: $file - see above."; exit 1 }
+}
 function Unchanged($dll, $key) {
   $was = $state[$dll]
   return (-not $All) -and $was -and $was[1] -eq $key -and (Test-Path "dist\$dll") -and (Test-Path "dist\$dll.sha256")
@@ -52,6 +63,7 @@ foreach ($dir in Get-ChildItem 'plugins' -Directory) {
     & dotnet build $proj.FullName -c Release -p:DebugType=none
     if ($LASTEXITCODE -ne 0) { Write-Host ''; Write-Host "PLUGIN BUILD FAILED: $($proj.FullName) - copy the errors above and send them to me."; exit 1 }
     Copy-Item (Join-Path $dir.FullName "bin\Release\net10.0-windows\$dll") 'dist\' -Force
+    Sign "dist\$dll"
     Put $dll $key
     Write-Host "Plugin built: $((Resolve-Path "dist\$dll").Path)"; $built++
   }

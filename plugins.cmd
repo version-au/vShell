@@ -7,6 +7,12 @@ cd /d "%~dp0"
 if not exist dist\vShell.exe (echo dist\vShell.exe isn't there - run build.cmd first. & pause & exit /b 1)
 set ALL=
 if /i "%~1"=="all" set ALL=-All
+rem code signing (the Certum certificate, through SimplySign Desktop - connect it first): each plugin built is signed (scripts\plugins.ps1)
+rem "nosign" skips it; an upload needs it
+set SIGN=1
+for %%a in (%*) do if /i "%%~a"=="nosign" set SIGN=
+set SIGNREQ=
+for %%a in (%*) do if /i "%%~a"=="upload" set SIGNREQ=-Require
 powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\plugins.ps1" %ALL%
 if errorlevel 1 (echo. & echo PLUGINS FAILED - see above. & pause & exit /b 1)
 del /q dist\plugins.json dist\plugins.txt 2>nul
@@ -19,6 +25,7 @@ if errorlevel 1 (echo. & echo UPDATE SITE FILES FAILED - see above. & pause & ex
 rem "plugins.cmd upload": straight onto the update site (vSuite.Core\scripts\site-upload.ps1)
 set UPLOAD=
 for %%a in (%*) do if /i "%%~a"=="upload" set UPLOAD=1
+if defined UPLOAD if not defined SIGN (echo. & echo UPLOAD STOPPED - this build isn't signed. Connect SimplySign Desktop and build again. & pause & exit /b 1)
 if defined UPLOAD powershell -NoProfile -ExecutionPolicy Bypass -File "vSuite.Core\scripts\site-upload.ps1" -Site dist\site
 if defined UPLOAD if errorlevel 1 (echo. & echo UPLOAD FAILED - see above. & pause & exit /b 1)
 echo.

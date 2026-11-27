@@ -11,6 +11,8 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.254 - signed plugins. With SimplySign Desktop connected, `build.cmd all` says "Signed: vShell.<Plugin>.dll" for each of your plugins it builds (third-party\ ones aren't signed).. Any plugin DLL in dist\: right-click > Properties > Digital Signatures - the Certum certificate, with a timestamp; its .sha256 matches the signed file.. After updating to 0.38.254, the plugins vShell fetched (%APPDATA%\vShell\plugins\*-0.38.254.dll) are signed and load as before.. `plugins.cmd upload` without SimplySign connected stops: "UPLOAD STOPPED - this build isn't signed".
+
 ## 0.38.253 - signed with the Certum certificate
 1. Before building: SimplySign Desktop connected (its tray icon > Connect, the code from the phone). `build.cmd` says "Signed: vShell.exe",
    then Inno Setup signs the setup and its uninstaller. Not connected: a local build says "Building unsigned"; `build.cmd upload` stops.

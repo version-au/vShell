@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.254
+
+- The plugins are signed with the same certificate as vShell, so Windows' Smart App Control and antivirus trust them like vShell itself.
+
 ## 0.38.253 · release
 
 - Signed with the developer's code-signing certificate: Windows shows who made the app and its installer instead of "Unknown publisher".
