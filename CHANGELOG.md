@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.253
+## 0.38.253 · release
 
 - Signed with the developer's code-signing certificate: Windows shows who made the app and its installer instead of "Unknown publisher".
 - Claude usage 2.1.1: "a limit is getting close" tells you once per window, not every few minutes.
