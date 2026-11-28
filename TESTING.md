@@ -11,6 +11,11 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.256 - a new Downloads module shows with nothing downloading
+1. With qBittorrent / SABnzbd set up and nothing in their queues, add a Downloads module to a bar: it shows "↓ 0 B/s   idle" (or
+   your style's look) straight away. Its settings: "Hide when nothing is downloading" is off.
+2. Tick it: the module hides; add a download and it comes back. Modules you already had keep their own setting.
+
 ## 0.38.255 - vTrace plugin 2.2.0: Uptime monitors
 Needs vTrace 0.1.14 (its GET /api/v1/uptime) with a few Uptime monitors, one of them down (a Port monitor on a closed port works).
 1. Settings > Modules > a vTrace bar module: a new **Show** list (Changes / Uptime / Both). Changes looks as before.

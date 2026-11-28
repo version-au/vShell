@@ -619,7 +619,8 @@ namespace vShell.Core
                 case ModuleTypes.StartMenu: m.IconSize = 22; break;
                 case ModuleTypes.Spacer: m.SpacerWidth = 0; break;
                 case ModuleTypes.NowPlaying: m.HideIfNone = false; break;
-                case ModuleTypes.Downloads: m.Style = "Line"; m.GraphWidth = 50; m.RangeMax = 50; m.ShowText = true; m.AutoScale = true; break;
+                // (shown even with nothing downloading: a module that hides itself straight after it's added looks broken)
+                case ModuleTypes.Downloads: m.Style = "Line"; m.GraphWidth = 50; m.RangeMax = 50; m.ShowText = true; m.AutoScale = true; m.HideIfNone = false; break;
             }
             return m;
         }

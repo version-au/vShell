@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.256
+
+- A Downloads module you add shows straight away, even when nothing is downloading (before, it hid itself until something was).
+
 ## 0.38.255 · release
 
 - vTrace plugin: show vTrace's Uptime monitors on the bar and in the widget, like the Uptime Kuma plugin - each module's new Show setting picks Changes, Uptime or Both.
