@@ -233,6 +233,7 @@ namespace vShell.Core
         public static void Configure(BarSettings s)
         {
             _s = s;
+            LogSetup(s);
             lock (Gate)
                 if (_timer == null && (NetConfigured(s) || ProtectConfigured(s))) _timer = new Timer(delegate { Tick(); }, null, 900, 2000);
             StartStreams();
@@ -251,6 +252,7 @@ namespace vShell.Core
                 _pro = new PrSnapshot();
             }
             _s = null;
+            _netLogged = ""; _proLogged = ""; _setupLogged = "";
         }
         public static UnSnapshot Network { get { _netWanted = DateTime.UtcNow; lock (Gate) return _net; } }
         public static PrSnapshot Protect { get { _proWanted = DateTime.UtcNow; lock (Gate) return _pro; } }
@@ -289,6 +291,7 @@ namespace vShell.Core
         /// <summary>GET a JSON path under /proxy/network/integration or /proxy/protect/integration with that app's key.</summary>
         static string Get(BarSettings s, bool protect, string path)
         {
+            _asking = path;
             var req = new HttpRequestMessage(HttpMethod.Get, Base(s) + (protect ? "/proxy/protect/integration" : "/proxy/network/integration") + path);
             req.Headers.TryAddWithoutValidation("X-API-KEY", (protect ? UnSettings.Of(s).ProtectKeyPlain : UnSettings.Of(s).NetKeyPlain));
             req.Headers.TryAddWithoutValidation("Accept", "application/json");
@@ -320,6 +323,46 @@ namespace vShell.Core
             if (code == 401 || code == 403) return (protect ? "Protect" : "UniFi Network") + " refused the API key (" + code + ")";
             if (code == 404) return (protect ? "Protect" : "UniFi Network") + " has no official API here (404) - is the address right, and the app up to date?";
             return (protect ? "Protect" : "UniFi Network") + " answered " + code + (msg.Length > 0 ? ": " + msg : "");
+        }
+
+        // ---- the log: a line when a poll starts failing, its error changes, or it works again (not on every poll) ----
+        [ThreadStatic] static string _asking;              // the path the poll was asking for when it failed
+        static string _netLogged = "", _proLogged = "", _setupLogged = "", _streamLogged = "";
+
+        /// <summary>The error and what caused it ("... see inner exception" says nothing on its own).</summary>
+        static string Why(Exception ex)
+        {
+            var parts = new List<string>();
+            for (Exception e = ex; e != null; e = e.InnerException)
+            {
+                string m = (e.Message ?? "").Trim();
+                if (m.Length > 0 && !parts.Contains(m)) parts.Add(m);
+            }
+            return parts.Count == 0 ? ex.GetType().Name : string.Join(" > ", parts);
+        }
+
+        static string Where(BarSettings s) { return Base(s) + (UnSettings.Of(s).IgnoreCert ? " (ignoring its certificate)" : ""); }
+
+        static void LogPoll(BarSettings s, bool protect, string error)
+        {
+            string app = protect ? "UniFi Protect" : "UniFi Network";
+            string state = error ?? "ok";
+            string was = protect ? _proLogged : _netLogged;
+            if (state == was) return;
+            if (protect) _proLogged = state; else _netLogged = state;
+            if (error != null) Log.Write(app + ": can't read " + Where(s) + " - " + error);
+            else Log.Write(app + (was.Length == 0 ? ": connected to " : ": working again - ") + Where(s));
+        }
+
+        static void LogSetup(BarSettings s)
+        {
+            if (s == null) return;
+            string line = "UniFi: Network " + (NetConfigured(s) ? "set up" : "not set up (needs the address and a Network API key)")
+                + ", Protect " + (ProtectConfigured(s) ? "set up" : "not set up (needs the address and a Protect API key)")
+                + (string.IsNullOrWhiteSpace(UnSettings.Of(s).Url) ? "" : ", address " + Where(s));
+            if (line == _setupLogged) return;
+            _setupLogged = line;
+            Log.Write(line);
         }
 
         // ---- polling ----
@@ -390,6 +433,7 @@ namespace vShell.Core
         {
             var snap = new UnSnapshot { Fetched = DateTime.UtcNow };
             var keep = new List<JsonDocument>();
+            _asking = null;
             try
             {
                 // the site: the one named in the settings, else the first ("Default")
@@ -484,8 +528,9 @@ namespace vShell.Core
                 }
                 MarkNew(snap);
                 snap.Ok = true;
+                LogPoll(s, false, null);
             }
-            catch (Exception ex) { snap.Error = ex.Message; }
+            catch (Exception ex) { snap.Error = ex.Message; LogPoll(s, false, Why(ex) + (string.IsNullOrEmpty(_asking) ? "" : " (asking for " + _asking + ")")); }
             finally { foreach (JsonDocument d in keep) d.Dispose(); }
             return snap;
         }
@@ -585,6 +630,7 @@ namespace vShell.Core
         static PrSnapshot ReadProtect(BarSettings s)
         {
             var snap = new PrSnapshot { Fetched = DateTime.UtcNow };
+            _asking = null;
             try
             {
                 using (JsonDocument d = JsonDocument.Parse(Get(s, true, "/v1/cameras")))
@@ -623,8 +669,9 @@ namespace vShell.Core
                 }
                 catch { }
                 snap.Ok = true;
+                LogPoll(s, true, null);
             }
-            catch (Exception ex) { snap.Error = ex.Message; }
+            catch (Exception ex) { snap.Error = ex.Message; LogPoll(s, true, Why(ex) + (string.IsNullOrEmpty(_asking) ? "" : " (asking for " + _asking + ")")); }
             return snap;
         }
 
@@ -761,12 +808,20 @@ namespace vShell.Core
                     try
                     {
                         // both streams together: when one drops, both are closed and opened again
+                        DateTime opened = DateTime.UtcNow;
                         var events = Task.Run(delegate { Listen(s, "/v1/subscribe/events", key, OnEvent, cts.Token); });
                         var devices = Task.Run(delegate { Listen(s, "/v1/subscribe/devices", key, OnDevice, cts.Token); });
                         int done = Task.WaitAny(events, devices);
                         Task first = done == 0 ? events : devices;
-                        if (first.Exception != null) Log.Write("Protect stream: " + first.Exception.GetBaseException().Message);
-                        else wait = 2;
+                        string which = done == 0 ? "events" : "devices";
+                        TimeSpan up = DateTime.UtcNow - opened;
+                        string after = up.TotalMinutes >= 1 ? (int)up.TotalMinutes + " min" : (int)up.TotalSeconds + " s";
+                        string line = "Protect stream (" + which + "): " + (first.Exception != null ? Why(first.Exception.GetBaseException()) : "closed by the console");
+                        bool quick = up.TotalSeconds < 60;
+                        // one that keeps failing straight away is logged once, not on every try
+                        if (!quick || line != _streamLogged) Log.Write(line + " - after " + after + ", " + Where(s) + (quick ? ", trying again in " + wait + " s" : ", opening it again"));
+                        _streamLogged = line;
+                        if (!quick) wait = 2;
                         // the other one is cancelled below and ends with an error nobody waits for: look at it, or .NET logs it as an
                         // "unobserved task error" (with its whole stack) on every reconnect
                         Task other = done == 0 ? devices : events;

@@ -11,6 +11,17 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.256 - UniFi plugin: connection problems in the log
+Log: `%APPDATA%\vShell\vshell.log`.
+1. Start vShell with UniFi set up: one line "UniFi: Network set up, Protect set up, address https://…", then
+   "UniFi Network: connected to https://…" (and "UniFi Protect: connected to …" if Protect has a key). Nothing more on later polls.
+2. Settings > Plugins > UniFi: change the address to a wrong port (e.g. `:9999`). The bar shows "UniFi n/a" and the log gets one
+   "UniFi Network: can't read https://…:9999 - <the reason> (asking for /v1/sites)" - not a line on every poll.
+3. Put the address back: "UniFi Network: working again - https://…".
+4. Put a wrong Network API key in: "UniFi Network: can't read … - UniFi Network refused the API key (401)".
+5. Unplug the network for a minute (with Protect set up): "Protect stream (events): … - after 12 min, https://…, opening it again";
+   while it stays down, each different error shows once, not on every retry.
+
 ## 0.38.256 - a new Downloads module shows with nothing downloading
 1. With qBittorrent / SABnzbd set up and nothing in their queues, add a Downloads module to a bar: it shows "↓ 0 B/s   idle" (or
    your style's look) straight away. Its settings: "Hide when nothing is downloading" is off.

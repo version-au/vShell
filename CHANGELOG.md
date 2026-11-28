@@ -5,6 +5,7 @@ Newest first. The heading must start with `## ` and the version number exactly a
 
 ## 0.38.256
 
+- UniFi plugin: connection problems go in vShell's log - when Network or Protect can't be read and why, when it works again, and which Protect stream dropped.
 - A Downloads module you add shows straight away, even when nothing is downloading (before, it hid itself until something was).
 
 ## 0.38.255 · release
