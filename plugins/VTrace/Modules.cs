@@ -23,6 +23,227 @@ namespace VShellVTrace
         public bool Chart { get { return _b.Get("Chart", true); } set { _b.Set("Chart", value); } }
         /// <summary>Only the issues: outages (still going or back up) and changes that failed.</summary>
         public bool IssuesOnly { get { return _b.Get("IssuesOnly", false); } set { _b.Set("IssuesOnly", value); } }
+
+        public const string ShowChanges = "Changes", ShowUptime = "Uptime", ShowBoth = "Both";
+        /// <summary>What the module shows: vTrace's changes, only its Uptime monitors, or both (the monitors first).</summary>
+        public string Show { get { string s = _b.Get("Show", ShowChanges); return s == ShowUptime || s == ShowBoth ? s : ShowChanges; } set { _b.Set("Show", value); } }
+        public bool WithUptime { get { return Show != ShowChanges; } }
+        public bool WithChanges { get { return Show != ShowUptime; } }
+        /// <summary>Uptime: only the monitors that aren't up (down, missing checks, can't tell).</summary>
+        public bool NotUpOnly { get { return _b.Get("UpNotUpOnly", false); } set { _b.Set("UpNotUpOnly", value); } }
+        /// <summary>Uptime: each monitor's answer time (or its state when it isn't up).</summary>
+        public bool AnswerTimes { get { return _b.Get("UpAnswerTimes", true); } set { _b.Set("UpAnswerTimes", value); } }
+        /// <summary>Uptime: how much of the last day each was up.</summary>
+        public bool DayPercent { get { return _b.Get("UpDayPercent", false); } set { _b.Set("UpDayPercent", value); } }
+        /// <summary>Uptime: each monitor's last checks, as a strip.</summary>
+        public bool Beats { get { return _b.Get("UpBeats", false); } set { _b.Set("UpBeats", value); } }
+    }
+
+    /// <summary>Drawing vTrace's Uptime monitors - as the Uptime Kuma plugin's list: a summary, then a row per monitor.</summary>
+    static class UpDraw
+    {
+        public static Brush StateBrush(Theme t, string status)
+        {
+            switch (status)
+            {
+                case "up": return StatusColors.Good;
+                case "down": return StatusColors.Bad;
+                case "pending": return StatusColors.Warn;
+                case "paused": return t.SecondaryAccent;
+            }
+            return t.FgDim;
+        }
+
+        public static string StateText(string status)
+        {
+            switch (status)
+            {
+                case "up": return "up";
+                case "down": return "down";
+                case "pending": return "missing checks";
+                case "paused": return "paused";
+                case "unknown": return "can't tell";
+            }
+            return "not checked yet";
+        }
+
+        /// <summary>"12 up · 1 down · 1 missing checks".</summary>
+        public static string Summary(UpSnapshot s)
+        {
+            var parts = new List<string>();
+            foreach (string st in new[] { "down", "pending", "unknown", "paused", "up" })
+            {
+                int n = s.Count(st);
+                if (n > 0) parts.Add(n + " " + StateText(st));
+            }
+            return parts.Count == 0 ? "No monitors" : string.Join(" · ", parts);
+        }
+
+        /// <summary>Not up and not paused: what Not up shows and the bar counts.</summary>
+        public static bool NeedsYou(UpMonitor m) { return m.Status != "up" && m.Status != "paused" && m.Status != "new"; }
+
+        /// <summary>What's shown, as text: rebuild only when this changes.</summary>
+        public static string Signature(UpSnapshot s, TraceView v)
+        {
+            var b = new StringBuilder(v.NotUpOnly + "|" + v.AnswerTimes + "|" + v.DayPercent + "|" + v.Beats + "|" + s.Checked + "|" + s.Error);
+            foreach (UpMonitor m in s.Monitors)
+            {
+                b.Append('|').Append(m.Id).Append(m.Name).Append(':').Append(m.Status).Append(':').Append(m.Group);
+                if (v.AnswerTimes) b.Append(':').Append(double.IsNaN(m.Ms) ? "" : Math.Round(m.Ms).ToString());
+                if (v.DayPercent) b.Append(':').Append(Pct(m.Day));
+                if (v.Beats) b.Append(':').Append(m.Beats);
+            }
+            return b.ToString();
+        }
+
+        public static string Pct(double f)
+        {
+            if (double.IsNaN(f)) return "-";
+            double p = f * 100;
+            return p >= 99.995 ? "100%" : p >= 99 ? p.ToString("0.00") + "%" : p.ToString("0.#") + "%";
+        }
+
+        static TextBlock Txt(Theme t, string text, Brush fg, double size, bool bold = false)
+        {
+            return new TextBlock
+            {
+                Text = text, Foreground = fg, FontFamily = t.Font, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal,
+                VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis
+            };
+        }
+
+        static string Tip(UpMonitor m)
+        {
+            var l = new List<string> { m.Name + " - " + StateText(m.Status) };
+            if (m.Check.Length > 0) l.Add(m.Check);
+            if ((m.Status == "down" || m.Status == "pending") && m.Since != DateTime.MinValue) l.Add((m.Status == "down" ? "Down since " : "Missing checks since ") + TimeText.Clock(m.Since));
+            if (m.Why.Length > 0 && !m.Up) l.Add(m.Why);
+            if (!double.IsNaN(m.Day)) l.Add("Up " + Pct(m.Day) + " of the last day" + (double.IsNaN(m.Month) ? "" : ", " + Pct(m.Month) + " of 30 days"));
+            if (m.CheckedAt != DateTime.MinValue) l.Add("Checked " + TimeText.Clock(m.CheckedAt));
+            return string.Join("\n", l) + "\n\nClick to see it in vTrace";
+        }
+
+        /// <summary>The All / Not up switch in the heading (the module's Only the ones not up setting).</summary>
+        static FrameworkElement Switch(Theme t, TraceView v, double fs, Action changed)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 2, 0) };
+            foreach (bool notUp in new[] { false, true })
+            {
+                bool on = v.NotUpOnly == notUp;
+                bool pick = notUp;
+                var b = new Border
+                {
+                    CornerRadius = new CornerRadius(4), Padding = new Thickness(6, 1, 6, 1), Cursor = on ? Cursors.Arrow : Cursors.Hand,
+                    Background = on ? t.MainAccent.Clone() : Brushes.Transparent,
+                    ToolTip = notUp ? "Only the monitors that aren't up" : "Every monitor",
+                    Child = Txt(t, notUp ? "Not up" : "All", on ? t.Fg : t.FgDim, fs - 2, on)
+                };
+                if (on) b.Background.Opacity = 0.3;
+                b.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
+                b.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e)
+                {
+                    e.Handled = true;
+                    if (v.NotUpOnly == pick) return;
+                    v.NotUpOnly = pick;
+                    if (changed != null) changed();
+                };
+                sp.Children.Add(b);
+            }
+            return sp;
+        }
+
+        /// <summary>The last checks: a thin bar each (red = missed), oldest on the left.</summary>
+        static FrameworkElement BeatStrip(string beats, double h)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
+            int blank = Math.Max(0, 20 - beats.Length);
+            string last = beats.Length > 20 ? beats.Substring(beats.Length - 20) : beats;
+            for (int i = 0; i < blank; i++) sp.Children.Add(new Rectangle { Width = 3, Height = h, Margin = new Thickness(0.5, 0, 0.5, 0), RadiusX = 1, RadiusY = 1, Fill = StatusColors.Good, Opacity = 0.12 });
+            foreach (char c in last) sp.Children.Add(new Rectangle { Width = 3, Height = h, Margin = new Thickness(0.5, 0, 0.5, 0), RadiusX = 1, RadiusY = 1, Fill = c == '1' ? StatusColors.Good : StatusColors.Bad, Opacity = 0.9 });
+            return sp;
+        }
+
+        /// <summary>
+        /// The monitors: "Uptime" with a summary and the All / Not up switch, then a row per monitor (dot, name, answer time, last day,
+        /// last checks), under its group's name when there's more than one group. Click = its page in vTrace.
+        /// </summary>
+        public static FrameworkElement List(Theme t, UpSnapshot s, TraceView v, double fs, Action switched)
+        {
+            var root = new StackPanel();
+            if (!TraceServer.On) { root.Children.Add(Txt(t, "Set up your vTrace server in Settings > Plugins > vTrace.", t.FgDim, fs - 1)); return root; }
+            if (!s.Checked) { root.Children.Add(Txt(t, "Asking vTrace…", t.FgDim, fs - 1)); return root; }
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 4), LastChildFill = false };
+            FrameworkElement sw = Switch(t, v, fs, switched);
+            DockPanel.SetDock(sw, Dock.Right);
+            head.Children.Add(sw);
+            head.Children.Add(Txt(t, "Uptime", t.Fg, fs + 1, true));
+            if (s.Ok) head.Children.Add(Txt(t, "  ·  " + Summary(s), s.Count("down") > 0 ? StatusColors.Bad : t.FgDim, fs - 1));
+            root.Children.Add(head);
+            if (s.Error != null)
+            {
+                var e = Txt(t, s.Error, StatusColors.Warn, fs - 1);
+                e.TextWrapping = TextWrapping.Wrap;
+                e.TextTrimming = TextTrimming.None;
+                root.Children.Add(e);
+                if (s.Monitors.Count == 0) return root;
+            }
+            List<UpMonitor> shown = s.Monitors.Where(m => !v.NotUpOnly || NeedsYou(m)).ToList();
+            bool groups = shown.Select(m => m.Group).Distinct().Count() > 1;
+            string group = null;
+            foreach (UpMonitor m in shown)
+            {
+                if (groups && m.Group != group)
+                {
+                    group = m.Group;
+                    var g = Txt(t, group.ToUpperInvariant(), t.FgDim, fs - 3, true);
+                    g.Margin = new Thickness(0, group == shown[0].Group ? 2 : 6, 0, 1);
+                    root.Children.Add(g);
+                }
+                var row = new Grid { Margin = new Thickness(0, 1, 0, 1), Background = Brushes.Transparent, Cursor = Cursors.Hand };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                var dot = ModulePics.Dot(StateBrush(t, m.Status), Math.Max(6, fs * 0.6));
+                dot.Margin = new Thickness(0, 0, 8, 0);
+                row.Children.Add(dot);
+                var name = Txt(t, m.Name, m.Status == "down" ? StatusColors.Bad : m.Status == "paused" ? t.FgDim : t.Fg, fs);
+                Grid.SetColumn(name, 1);
+                row.Children.Add(name);
+                if (v.Beats)
+                {
+                    FrameworkElement strip = BeatStrip(m.Beats, Math.Max(8, fs * 0.8));
+                    Grid.SetColumn(strip, 2);
+                    row.Children.Add(strip);
+                }
+                if (v.AnswerTimes)
+                {
+                    string ms = m.Up && !double.IsNaN(m.Ms) ? Math.Round(m.Ms) + " ms" : m.Up ? m.Answer : StateText(m.Status);
+                    var rt = Txt(t, ms, m.Status == "down" ? StatusColors.Bad : m.Status == "pending" ? StatusColors.Warn : t.FgDim, fs * 0.9);
+                    rt.Margin = new Thickness(10, 0, 0, 0);
+                    Grid.SetColumn(rt, 3);
+                    row.Children.Add(rt);
+                }
+                if (v.DayPercent)
+                {
+                    var pc = Txt(t, Pct(m.Day), !double.IsNaN(m.Day) && m.Day < 0.99 ? StatusColors.Warn : t.FgDim, fs * 0.9);
+                    pc.Margin = new Thickness(10, 0, 0, 0);
+                    pc.ToolTip = "Up over the last day";
+                    Grid.SetColumn(pc, 4);
+                    row.Children.Add(pc);
+                }
+                row.ToolTip = Tip(m);
+                string link = m.Link.Length > 0 ? m.Link : "/uptime";
+                // (a widget: handle the press too, or it starts a widget drag)
+                row.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
+                row.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; TraceServer.OpenPath(link); };
+                root.Children.Add(row);
+            }
+            if (shown.Count == 0 && s.Ok)
+                root.Children.Add(Txt(t, s.Monitors.Count == 0 ? "No monitors yet - add them on vTrace's Uptime page." : "Everything is up", t.FgDim, fs - 1));
+            return root;
+        }
     }
 
     /// <summary>Drawing vTrace's changes: the list (a widget, the bar's popup), today's chart, colours.</summary>
@@ -108,6 +329,51 @@ namespace VShellVTrace
             var b = new StringBuilder(v.Rows + "|" + v.Chart + "|" + v.IssuesOnly + "|" + DateTime.Today.Ticks + "|" + TraceData.Error + "|" + open + "|" + (open ? "" : TraceData.CheckedText() + TraceData.Stale));
             foreach (Change c in all.Take(v.Rows + 40)) b.Append('|').Append(c.Id).Append(c.Title).Append(c.Until.Ticks).Append(c.Group).Append(c.GroupCount).Append(c.Cause).Append(c.Explanation.Length);
             return b.ToString();
+        }
+
+        /// <summary>What a popup or widget shows, as text, for its Show setting: rebuild only when this changes.</summary>
+        public static string ModuleSignature(TraceView v)
+        {
+            string s = v.Show;
+            if (v.WithUptime) s += "|" + UpDraw.Signature(TraceServer.Uptime, v);
+            if (v.WithChanges) s += "|" + Signature(TraceData.All, v);
+            return s;
+        }
+
+        /// <summary>
+        /// A popup's or widget's content for its Show setting: the Uptime monitors, vTrace's changes, or both (the monitors first).
+        /// </summary>
+        public static FrameworkElement Module(Theme t, TraceView v, double fs, bool openButton, Action redraw, Action switched)
+        {
+            if (!v.WithUptime) return List(t, TraceData.All, v, fs, openButton, redraw, switched);
+            FrameworkElement up = UpDraw.List(t, TraceServer.Uptime, v, fs, switched);
+            if (!v.WithChanges && !openButton) return up;
+            var st = new StackPanel();
+            st.Children.Add(up);
+            if (v.WithChanges)
+            {
+                var line = new Border { Height = 1, Background = t.FgDim, Opacity = 0.25, Margin = new Thickness(0, 8, 0, 8) };
+                st.Children.Add(line);
+                st.Children.Add(List(t, TraceData.All, v, fs, openButton, redraw, switched));
+            }
+            else
+            {
+                var open = Txt(t, "Open vTrace's Uptime", t.MainAccent, fs - 1, true);
+                open.Margin = new Thickness(0, 8, 0, 0);
+                open.Cursor = Cursors.Hand;
+                open.MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
+                open.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; TraceServer.OpenPath("/uptime"); };
+                st.Children.Add(open);
+            }
+            return st;
+        }
+
+        /// <summary>"Uptime: 12 up · 1 down" for a tip.</summary>
+        public static string UptimeLine(UpSnapshot s)
+        {
+            if (!s.Checked) return "Uptime: asking vTrace…";
+            if (s.Error != null) return "Uptime: " + s.Error;
+            return "Uptime: " + UpDraw.Summary(s);
         }
 
         static TextBlock Txt(Theme t, string text, Brush fg, double size, bool bold = false)
@@ -382,6 +648,8 @@ namespace VShellVTrace
 
         void Refresh()
         {
+            TraceView v = TraceView.Of(_cfg);
+            if (v.Show == TraceView.ShowUptime) { RefreshUptime(v); return; }
             List<Change> all = TraceData.All;
             List<Change> down = TraceDraw.Down(all), today = TraceDraw.Today(all);
             string text, tip;
@@ -405,21 +673,51 @@ namespace VShellVTrace
             bool closed = !TraceData.AppOpen, busy = TraceData.Refreshing;
             if (closed && TraceData.Error == null) tip += "\n" + TraceData.CheckedText() + " (the refresh button asks the server to look now)";
             bool hide = _cfg.HideIfNone && TraceData.Error == null && down.Count == 0 && today.Count == 0;
-            string sig = text + "|" + hide + "|" + tip + "|" + closed + "|" + busy;
+            if (v.WithUptime) tip += "\n" + TraceDraw.UptimeLine(TraceServer.Uptime);
+            Show(text, fg, down.Count > 0 ? fg : _t.MainAccent, tip, hide, closed, busy);
+        }
+
+        /// <summary>Show only the Uptime monitors: "All up", "2 down", "1 missing checks" (as the Uptime Kuma plugin).</summary>
+        void RefreshUptime(TraceView v)
+        {
+            UpSnapshot s = TraceServer.Uptime;
+            string text, tip;
+            Brush fg = _t.Fg;
+            int down = s.Count("down"), pending = s.Count("pending");
+            if (!TraceServer.On) { text = "…"; tip = "Set up your vTrace server in Settings > Plugins > vTrace"; }
+            else if (!s.Checked) { text = "…"; tip = "vTrace Uptime - asking"; }
+            else if (s.Error != null) { text = "!"; fg = StatusColors.Warn; tip = s.Error; }
+            else if (s.Monitors.Count == 0) { text = "No monitors"; fg = _t.FgDim; tip = "vTrace has no Uptime monitors yet - add them on its Uptime page"; }
+            else
+            {
+                text = down > 0 ? down + " down" : pending > 0 ? pending + " missing checks" : "All up";
+                fg = down > 0 ? StatusColors.Bad : pending > 0 ? StatusColors.Warn : _t.Fg;
+                var lines = new List<string> { "vTrace Uptime: " + UpDraw.Summary(s) };
+                foreach (UpMonitor m in s.Monitors.Where(UpDraw.NeedsYou).Take(8))
+                    lines.Add("  " + m.Name + " - " + UpDraw.StateText(m.Status) + (m.Since != DateTime.MinValue ? " since " + TimeText.Clock(m.Since) : ""));
+                tip = string.Join("\n", lines) + "\nClick for the list";
+            }
+            bool hide = _cfg.HideIfNone && TraceServer.On && s.Checked && s.Error == null && down == 0 && pending == 0;
+            Show(text, fg, fg == _t.Fg ? _t.MainAccent : fg, tip, hide, false, false);
+        }
+
+        void Show(string text, Brush fg, Brush glyph, string tip, bool hide, bool refreshButton, bool busy)
+        {
+            string sig = text + "|" + hide + "|" + tip + "|" + refreshButton + "|" + busy;
             if (_popup != null && _popup.IsOpen)
             {
-                string ps = TraceDraw.Signature(all, TraceView.Of(_cfg));
-                if (ps != _popupShown) { _popupShown = ps; _popup.SetContent(PopupContent(all)); }
+                string ps = PopupSignature();
+                if (ps != _popupShown) { _popupShown = ps; _popup.SetContent(PopupContent()); }
             }
             if (sig == _shown) return;
             _shown = sig;
             _text.Text = text;
             _text.Foreground = fg;
-            _glyph.Foreground = down.Count > 0 ? fg : _t.MainAccent;
+            _glyph.Foreground = glyph;
             ToolTip = tip;
             // the refresh button (the server looks now)
             if (_refresh != null) { _sp.Children.Remove(_refresh); _refresh = null; }
-            if (closed)
+            if (refreshButton)
             {
                 _refresh = TraceDraw.RefreshGlyph(_t, Math.Max(10, _t.FontSize - 1), Redraw);
                 _refresh.Margin = new Thickness(4, 0, 0, 0);
@@ -437,19 +735,20 @@ namespace VShellVTrace
             Refresh();
         }
 
-        FrameworkElement PopupContent(List<Change> all)
+        string PopupSignature() { return TraceDraw.ModuleSignature(TraceView.Of(_cfg)); }
+
+        FrameworkElement PopupContent()
         {
             var box = new Border { Padding = new Thickness(12, 10, 12, 10), MinWidth = 300, MaxWidth = 460 };
-            box.Child = TraceDraw.List(_t, all, TraceView.Of(_cfg), Math.Max(12, _t.FontSize), true, Redraw, delegate { _mgr.SaveSoon(); Redraw(); });
+            box.Child = TraceDraw.Module(_t, TraceView.Of(_cfg), Math.Max(12, _t.FontSize), true, Redraw, delegate { _mgr.SaveSoon(); Redraw(); });
             return box;
         }
 
         void TogglePopup()
         {
             if (_popup != null && _popup.IsOpen) { _popup.CloseSafe(); _popup = null; return; }
-            List<Change> all = TraceData.All;
-            _popupShown = TraceDraw.Signature(all, TraceView.Of(_cfg));
-            _popup = new PopupWindow(_mgr, _host, this, _t, PopupContent(all));
+            _popupShown = PopupSignature();
+            _popup = new PopupWindow(_mgr, _host, this, _t, PopupContent());
             if (_mgr.Settings.WidgetStyle != null) _popup.UseWidgetStyle(_t, _mgr.Settings.WidgetStyle);
             _mgr.ShowPopup(_popup);
         }
@@ -474,20 +773,23 @@ namespace VShellVTrace
             Padding = new Thickness(2);
             Cursor = Cursors.Hand;
             MouseLeftButtonDown += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; };
-            MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; TraceData.OpenApp(); };
+            MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e)
+            {
+                e.Handled = true;
+                if (TraceView.Of(_cfg).Show == TraceView.ShowUptime) TraceServer.OpenPath("/uptime"); else TraceData.OpenApp();
+            };
             ModuleTimer.Make(this, TimeSpan.FromSeconds(5), Refresh);
             Refresh();
         }
 
         void Refresh()
         {
-            List<Change> all = TraceData.All;
             TraceView v = TraceView.Of(_cfg);
-            string sig = TraceDraw.Signature(all, v) + "|" + DateTime.Now.Hour;
+            string sig = TraceDraw.ModuleSignature(v) + "|" + DateTime.Now.Hour;
             if (sig == _shown) return;
             _shown = sig;
             double fs = _cfg.ShownFontSize > 0 ? _cfg.ShownFontSize : _t.FontSize;
-            Child = TraceDraw.List(_t, all, v, fs, false, delegate { _shown = null; Refresh(); }, delegate { _mgr.SaveSoon(); _shown = null; Refresh(); });
+            Child = TraceDraw.Module(_t, v, fs, false, delegate { _shown = null; Refresh(); }, delegate { _mgr.SaveSoon(); _shown = null; Refresh(); });
             _host.ContentChanged();
         }
     }

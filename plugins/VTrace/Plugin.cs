@@ -6,7 +6,7 @@ using vShell.Core;
 using vShell.Ui;
 
 [assembly: VShellPlugin("vtrace", "vTrace",
-    Description = "vTrace's changes and outages: a bar module (an outage, or how many changes today) and a widget with the latest changes - from your vTrace server, and this PC's own changes sent to it.",
+    Description = "vTrace's changes, outages and Uptime monitors: a bar module (an outage, how many changes today, or all up) and a widget with the latest changes or your monitors - from your vTrace server, and this PC's own changes sent to it.",
     Glyph = "", Group = "Servers & network", Author = "version", Adds = "notifications", Types = "VTraceBar,VTraceList")]
 
 namespace VShellVTrace
@@ -35,7 +35,7 @@ namespace VShellVTrace
             host.AddModule(new PluginModule
             {
                 Type = "VTraceList", Display = "vTrace changes", ShortName = "Changes", Glyph = "", Group = "Servers & network",
-                Blurb = "the latest changes and outages", OnBar = false, Needs = Needs, WidgetSize = new Size(330, 0),
+                Blurb = "the latest changes, outages or Uptime monitors", OnBar = false, Needs = Needs, WidgetSize = new Size(330, 0),
                 Create = delegate (BarManager mgr, IModuleHost h, ModuleConfig cfg) { return new TraceListModule(mgr, h, cfg); },
                 Settings = ListRows, WidgetPicture = WidgetPic
             });
@@ -78,23 +78,46 @@ namespace VShellVTrace
             p.Kind("Back up, a new vTrace shows as", TraceServer.KindBack);
         }
 
+        static readonly string[] ShowChoices = { TraceView.ShowChanges, TraceView.ShowUptime, TraceView.ShowBoth };
+
+        static void ShowRow(SettingsWindow.SettingsPage p, TraceView v)
+        {
+            p.Combo("Show", ShowChoices, delegate { return v.Show; }, delegate (string s) { v.Show = s; p.Changed(); });
+            p.Note("Changes: what vTrace found changed, and outages. Uptime: only vTrace's Uptime monitors, each one's status and answer time (as the Uptime Kuma plugin shows them). Both: the monitors, then the changes. Uptime needs vTrace 0.1.14 or newer.");
+        }
+
+        static void UptimeRows(SettingsWindow.SettingsPage p, TraceView v)
+        {
+            p.Header("Uptime monitors");
+            p.Check("Only the ones that aren't up", delegate { return v.NotUpOnly; }, delegate (bool b) { v.NotUpOnly = b; p.Changed(); });
+            p.Check("Answer times", delegate { return v.AnswerTimes; }, delegate (bool b) { v.AnswerTimes = b; p.Changed(); });
+            p.Check("How much of the last day each was up", delegate { return v.DayPercent; }, delegate (bool b) { v.DayPercent = b; p.Changed(); });
+            p.Check("The last checks (a small strip)", delegate { return v.Beats; }, delegate (bool b) { v.Beats = b; p.Changed(); });
+            p.Note("All / Not up at the top of the list switches too. Click a monitor to open it in vTrace. vTrace's own notifications say when one goes down and comes back (vTrace: Options > Notifications > An outage starts or ends).");
+        }
+
         static void BarRows(SettingsWindow.SettingsPage p, ModuleConfig cfg)
         {
             TraceView v = TraceView.Of(cfg);
-            p.Check("Hide it when nothing is down and nothing changed today", delegate { return cfg.HideIfNone; }, delegate (bool b) { cfg.HideIfNone = b; p.Changed(); });
+            ShowRow(p, v);
+            p.Check("Hide it when nothing is down and nothing changed today (Uptime: while everything is up)", delegate { return cfg.HideIfNone; }, delegate (bool b) { cfg.HideIfNone = b; p.Changed(); });
             p.Header("In its popup");
             p.Number("Changes to show", delegate { return v.Rows; }, delegate (double d) { v.Rows = (int)Math.Round(d); p.Changed(); });
             p.Check("Only issues (outages and changes that failed)", delegate { return v.IssuesOnly; }, delegate (bool b) { v.IssuesOnly = b; p.Changed(); });
-            p.Note("Click it for the latest changes (All / Issues at the top switches too); Open vTrace there shows them all in your browser. An outage still going shows in red on the bar. The refresh button has vTrace look now.");
+            p.Note("Click it for the latest changes (All / Issues at the top switches too); Open vTrace there shows them all in your browser. An outage still going shows in red on the bar. The refresh button has vTrace look now. With Uptime the bar says All up, or how many are down.");
+            UptimeRows(p, v);
         }
 
         static void ListRows(SettingsWindow.SettingsPage p, ModuleConfig cfg)
         {
             TraceView v = TraceView.Of(cfg);
+            ShowRow(p, v);
+            p.Header("Changes");
             p.Number("Changes to show", delegate { return v.Rows; }, delegate (double d) { v.Rows = (int)Math.Round(d); p.Changed(); });
             p.Check("Today's changes by the hour (a small chart)", delegate { return v.Chart; }, delegate (bool b) { v.Chart = b; p.Changed(); });
             p.Check("Only issues (outages and changes that failed)", delegate { return v.IssuesOnly; }, delegate (bool b) { v.IssuesOnly = b; p.Changed(); });
             p.Note("What your vTrace server has found. All / Issues at its top switches between every change and only the issues; the refresh button has vTrace look now, and the widget says when it last looked. Click a change to open it in vTrace.");
+            UptimeRows(p, v);
         }
 
         static FrameworkElement BarPic(Theme t)

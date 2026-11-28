@@ -3,6 +3,10 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
+## 0.38.255
+
+- vTrace plugin: show vTrace's Uptime monitors on the bar and in the widget, like the Uptime Kuma plugin - each module's new Show setting picks Changes, Uptime or Both.
+
 ## 0.38.254 · release
 
 - The plugins are signed with the same certificate as vShell, so Windows' Smart App Control and antivirus trust them like vShell itself.

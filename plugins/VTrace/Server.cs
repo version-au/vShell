@@ -48,6 +48,30 @@ namespace VShellVTrace
         public int Problems;
     }
 
+    /// <summary>One of vTrace's Uptime monitors (/api/v1/uptime, vTrace 0.1.14).</summary>
+    public sealed class UpMonitor
+    {
+        public string Id = "", Name = "", Group = "", Kind = "", Check = "", Address = "", Answer = "", Why = "", Beats = "", Outage = "", Link = "";
+        /// <summary>"up", "down", "pending" (missing checks, not down yet), "paused", "unknown" (can't tell), "new" (not checked yet).</summary>
+        public string Status = "new";
+        /// <summary>The last answer, ms (NaN = none).</summary>
+        public double Ms = double.NaN;
+        /// <summary>Up over the last day / 30 days, 0-1 (NaN = no checks yet).</summary>
+        public double Day = double.NaN, Month = double.NaN;
+        public int Fails;
+        public DateTime Since = DateTime.MinValue, CheckedAt = DateTime.MinValue;
+        public bool Up { get { return Status == "up"; } }
+    }
+
+    /// <summary>One look at the Uptime monitors.</summary>
+    public sealed class UpSnapshot
+    {
+        public bool Ok, Checked;
+        public string Error;
+        public List<UpMonitor> Monitors = new List<UpMonitor>();
+        public int Count(string status) { return Monitors.Count(m => m.Status == status); }
+    }
+
     /// <summary>Something vTrace noticed (/api/v1/events): an outage starting or ending, a change that failed, a source it can't read.</summary>
     public sealed class VtEvent
     {
@@ -125,6 +149,43 @@ namespace VShellVTrace
             }
             snap.Changes = snap.Changes.OrderByDescending(x => x.When).ToList();
             return snap;
+        }
+
+        /// <summary>vTrace's Uptime monitors, in its Uptime page's order.</summary>
+        public static async Task<UpSnapshot> UptimeAsync(VtSettings c, CancellationToken ct)
+        {
+            return ParseUptime(await Send(Req(HttpMethod.Get, c, "/api/v1/uptime"), ct).ConfigureAwait(false));
+        }
+
+        public static UpSnapshot ParseUptime(string json)
+        {
+            var snap = new UpSnapshot { Ok = true, Checked = true };
+            using (JsonDocument d = JsonDocument.Parse(json))
+            {
+                if (d.RootElement.TryGetProperty("monitors", out JsonElement ms) && ms.ValueKind == JsonValueKind.Array)
+                    foreach (JsonElement e in ms.EnumerateArray())
+                        snap.Monitors.Add(new UpMonitor
+                        {
+                            Id = JsonValue.Str(e, "id"), Name = JsonValue.Str(e, "name"), Group = JsonValue.Str(e, "group"), Kind = JsonValue.Str(e, "kind"),
+                            Check = JsonValue.Str(e, "check"), Address = JsonValue.Str(e, "address"), Status = JsonValue.Str(e, "status"), Answer = JsonValue.Str(e, "answer"),
+                            Why = JsonValue.Str(e, "why"), Beats = JsonValue.Str(e, "beats"), Outage = JsonValue.Str(e, "outage"), Link = JsonValue.Str(e, "link"),
+                            Ms = NumOrNaN(e, "ms"), Day = NumOrNaN(e, "day"), Month = NumOrNaN(e, "month"), Fails = (int)JsonValue.Num(e, "fails"),
+                            Since = Date(JsonValue.Str(e, "since")), CheckedAt = Date(JsonValue.Str(e, "checkedAt")),
+                        });
+                else throw new JsonException("no monitors");
+            }
+            return snap;
+        }
+
+        static double NumOrNaN(JsonElement e, string name)
+        {
+            return e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : double.NaN;
+        }
+
+        /// <summary>The server is older than Uptime's API (vTrace 0.1.14).</summary>
+        public static bool TooOldForUptime(string version)
+        {
+            return Version.TryParse(version ?? "", out Version v) && v < new Version(0, 1, 14);
         }
 
         /// <summary>An ISO time with its offset -> this PC's local time; "" -> MinValue.</summary>
@@ -327,6 +388,23 @@ namespace VShellVTrace
         public const string KindOutage = "vTrace.Outage", KindProblem = "vTrace.Problem", KindBack = "vTrace.Back";
 
         public static VtSnapshot Latest = new VtSnapshot();
+        static volatile UpSnapshot _uptime = new UpSnapshot();
+        static DateTime _uptimeWanted = DateTime.MinValue;
+        /// <summary>
+        /// The Uptime monitors (an Uptime view reads this every few seconds): reading it keeps them asked for - every 10 seconds while shown,
+        /// not at all when nothing shows them (vTrace's own notifications say when one goes down).
+        /// </summary>
+        public static UpSnapshot Uptime
+        {
+            get
+            {
+                bool first = _uptimeWanted == DateTime.MinValue || DateTime.UtcNow - _uptimeWanted > TimeSpan.FromMinutes(2);
+                _uptimeWanted = DateTime.UtcNow;
+                Poller p = Poll;
+                if (p != null) { p.Want(); if (first && !_uptime.Checked) p.PollNow(); }
+                return _uptime;
+            }
+        }
         public static Poller Poll;
         static BarSettings _settings;
         static Dispatcher _ui;
@@ -356,6 +434,7 @@ namespace VShellVTrace
         {
             if (Poll != null) { Poll.Stop(); Poll.Dispose(); Poll = null; }
             Latest = new VtSnapshot();
+            _uptime = new UpSnapshot();
         }
 
         public static void OnSettings(BarSettings s)
@@ -363,6 +442,7 @@ namespace VShellVTrace
             _settings = s;
             _changesKey = null;      // it may be another server now: read its changes afresh
             if (Poll == null) return;
+            _uptime = new UpSnapshot();
             if (!VtSettings.Of(s).Configured) { if (Poll.Running) Poll.Stop(); Latest = new VtSnapshot(); _seen = null; return; }
             if (!Poll.Running) Poll.Start(); else Poll.PollNow();
             SendTheme(false);
@@ -405,8 +485,26 @@ namespace VShellVTrace
             }
             if (!snap.Ok) events = null;
             Publish(snap, events);
+            if (DateTime.UtcNow - _uptimeWanted < TimeSpan.FromMinutes(1)) await PollUptime(c, snap);
             if (snap.Ok && _themeSent == null) SendTheme(false);
             if (snap.Ok && c.SendPc && DateTime.UtcNow - _pcTried > TimeSpan.FromMinutes(15)) _ = SendPcAsync(false);
+        }
+
+        static async Task PollUptime(VtSettings c, VtSnapshot changes)
+        {
+            if (!changes.Ok) { _uptime = new UpSnapshot { Checked = true, Error = changes.Error, Monitors = _uptime.Monitors }; return; }
+            if (VtClient.TooOldForUptime(changes.Version))
+            {
+                _uptime = new UpSnapshot { Checked = true, Error = "Uptime needs vTrace 0.1.14 or newer (this one is " + changes.Version + ") - update it in vTrace's Options › Updates." };
+                return;
+            }
+            try { _uptime = await VtClient.UptimeAsync(c, CancellationToken.None).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                string why = VtClient.Plain(ex);
+                if (why.Contains("answered with a page") || why.Contains(" 404")) why = "Uptime needs vTrace 0.1.14 or newer - update it in vTrace's Options › Updates.";
+                _uptime = new UpSnapshot { Checked = true, Error = why, Monitors = _uptime.Monitors };
+            }
         }
 
         static void Publish(VtSnapshot snap, List<VtEvent> events)
@@ -452,6 +550,13 @@ namespace VShellVTrace
         public static void Open(string changeId)
         {
             string url = Url(string.IsNullOrEmpty(changeId) ? "/" : "/change/" + Uri.EscapeDataString(changeId));
+            try { if (url.Length > 0) RunPanel.Open(url); } catch (Exception ex) { Log.Write("vTrace plugin: open: " + ex.Message); }
+        }
+
+        /// <summary>One of vTrace's pages ("/uptime/abc"), in the browser.</summary>
+        public static void OpenPath(string path)
+        {
+            string url = Url(string.IsNullOrEmpty(path) ? "/" : path);
             try { if (url.Length > 0) RunPanel.Open(url); } catch (Exception ex) { Log.Write("vTrace plugin: open: " + ex.Message); }
         }
 

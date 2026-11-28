@@ -11,6 +11,21 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.255 - vTrace plugin 2.2.0: Uptime monitors
+Needs vTrace 0.1.14 (its GET /api/v1/uptime) with a few Uptime monitors, one of them down (a Port monitor on a closed port works).
+1. Settings > Modules > a vTrace bar module: a new **Show** list (Changes / Uptime / Both). Changes looks as before.
+2. Uptime: the bar says "1 down" in red (or "All up"; "2 missing checks" in yellow while one is failing but not down yet). Its tip
+   lists the ones not up with "since 2:14 PM". Tick "Hide it when …": it hides while everything is up.
+3. Click it: "Uptime · 2 up · 1 down · 1 paused" with All / Not up; a row per monitor (dot, name, "12 ms" or "down" / "paused"),
+   under group headings (as on vTrace's Uptime page) when there's more than one group. Not up keeps only down / missing checks /
+   can't tell ("Everything is up" when none). A row's tip: what it checks, down since, why, the last day / 30 days. Click a row:
+   its /uptime/<id> page in the browser; "Open vTrace's Uptime" at the bottom opens /uptime.
+4. The module's settings: Answer times, How much of the last day each was up ("99.31%" column, yellow under 99%), The last checks
+   (a strip of the last 20, red for missed).
+5. A vTrace changes widget with Show = Uptime: the same list, no changes; a click on its empty part opens /uptime. Both: the
+   monitors, a line, then the changes as before. A bar module on Both keeps its changes text, with an "Uptime: …" line in its tip.
+6. Against a vTrace 0.1.13: "Uptime needs vTrace 0.1.14 or newer (this one is 0.1.13) - update it in vTrace's Options › Updates."
+
 ## 0.38.254 - signed plugins. With SimplySign Desktop connected, `build.cmd all` says "Signed: vShell.<Plugin>.dll" for each of your plugins it builds (third-party\ ones aren't signed).. Any plugin DLL in dist\: right-click > Properties > Digital Signatures - the Certum certificate, with a timestamp; its .sha256 matches the signed file.. After updating to 0.38.254, the plugins vShell fetched (%APPDATA%\vShell\plugins\*-0.38.254.dll) are signed and load as before.. `plugins.cmd upload` without SimplySign connected stops: "UPLOAD STOPPED - this build isn't signed".
 
 ## 0.38.253 - signed with the Certum certificate
