@@ -3,7 +3,7 @@
 Each version's section is copied into `dist\release-notes.md` by `build.cmd` - paste that into the GitHub release.
 Newest first. The heading must start with `## ` and the version number exactly as in `vShell.csproj`.
 
-## 0.38.256
+## 0.38.256 · release
 
 - Open shell (Proxmox, vDeploy, Komodo and the others) opens in a vTerm window when no bar has a Terminal module, instead of dropping out of a bar.
 - Proxmox plugin: the bar module's popup shows only what its Show setting picks (Nodes, Guests or Storage), and its guest list has vSuite's scrollbar.
