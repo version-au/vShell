@@ -588,15 +588,26 @@ namespace vShell.Ui
             title.Children.Add(T(s.ClusterName.Length > 0 ? "Cluster " + s.ClusterName : "Proxmox VE", _t.Fg, 1.1, true));
             root.Children.Add(title);
 
-            root.Children.Add(Heading("NODES", false));
-            root.Children.Add(NodeList(s, true));
-            List<PveResource> guests = s.Guests("", false, View.ShowTemplates);
-            root.Children.Add(Heading("GUESTS  " + guests.FindAll(delegate (PveResource g) { return g.Status == "running"; }).Count + "/" + guests.Count + " running", true));
-            var scroll = new ScrollViewer { MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-            scroll.Content = GuestList(guests, true, s.Nodes("").Count > 1, s);
-            root.Children.Add(scroll);
-            root.Children.Add(Heading("STORAGE", true));
-            root.Children.Add(StorageList(s, true));
+            // only what the module's Show picks (nodes, guests or storage), as its widget does
+            switch (View.Show)
+            {
+                case "Guests":
+                    List<PveResource> all = s.Guests(View.Node, false, View.ShowTemplates);
+                    root.Children.Add(Heading("GUESTS  " + all.FindAll(delegate (PveResource g) { return g.Status == "running"; }).Count + "/" + all.Count + " running", false));
+                    var scroll = new ScrollViewer { MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+                    scroll.Content = GuestList(s.Guests(View.Node, View.RunningOnly, View.ShowTemplates), true, View.Node.Length == 0 && s.Nodes("").Count > 1, s);
+                    WidgetWindow.StyleScrollbars(scroll);       // the suite's thin scrollbar, not Windows' own
+                    root.Children.Add(scroll);
+                    break;
+                case "Storage":
+                    root.Children.Add(Heading("STORAGE", false));
+                    root.Children.Add(StorageList(s, true));
+                    break;
+                default:
+                    root.Children.Add(Heading("NODES", false));
+                    root.Children.Add(NodeList(s, true));
+                    break;
+            }
 
             var foot = new DockPanel { Margin = new Thickness(0, 10, 0, 0) };
             var open = T("Open web interface", _t.MainAccent, 0.85);
@@ -604,7 +615,7 @@ namespace vShell.Ui
             open.MouseLeftButtonUp += delegate (object o, MouseButtonEventArgs e) { e.Handled = true; OpenWeb(); };
             DockPanel.SetDock(open, Dock.Right);
             foot.Children.Add(open);
-            foot.Children.Add(T("Updated " + s.Fetched.ToLocalTime().ToString("T", CultureInfo.CurrentCulture) + (s.Error.Length > 0 ? "  ·  last update failed" : ""), s.Error.Length > 0 ? Down : _t.FgDim, 0.85));
+            foot.Children.Add(T("Updated " + TimeText.Clock(s.Fetched.ToLocalTime(), true) + (s.Error.Length > 0 ? "  ·  last update failed" : ""), s.Error.Length > 0 ? Down : _t.FgDim, 0.85));
             root.Children.Add(foot);
             return root;
         }

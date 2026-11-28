@@ -11,6 +11,14 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.256 - Proxmox plugin: the popup follows Show
+1. A Proxmox bar module with Show = Guests: click it. The popup has the cluster name, "GUESTS  n/m running" and the guests only -
+   no NODES or STORAGE. With "Hide stopped guests" ticked the stopped ones aren't listed (the heading still counts them); with a
+   node picked only its guests show.
+2. With enough guests to scroll: the scrollbar is the thin vSuite one (as in the vProxy / vPatch popups), not Windows' grey one.
+3. Show = Nodes: only NODES. Show = Storage: only STORAGE.
+4. The footer reads "Updated 2:14:05 PM" (24-hour only with Use 24-hour on).
+
 ## 0.38.256 - UniFi plugin: connection problems in the log
 Log: `%APPDATA%\vShell\vshell.log`.
 1. Start vShell with UniFi set up: one line "UniFi: Network set up, Protect set up, address https://…", then
