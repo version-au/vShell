@@ -14,7 +14,7 @@ namespace vShell.Ui
 
     /// <summary>
     /// "Open shell" from other modules (a Proxmox node, a Komodo server or container, Linux Updates' hosts): an SSH tab in vTerm's
-    /// drop-down from the first bar with a Terminal module (or the first bar). vTerm uses its saved connection for that host (by host,
+    /// drop-down from the first bar with a Terminal module, or in a vTerm window when no bar has one (0.38.256). vTerm uses its saved connection for that host (by host,
     /// then name); with none, it offers to make one (filled in) or connect without saving.
     /// </summary>
     [PluginApi]
@@ -39,7 +39,8 @@ namespace vShell.Ui
         /// <summary>As above; why = the reason there's no address (shown when there's no host and no saved connection by that name).</summary>
         public static void Host(BarManager mgr, string host, string name, string user, string remote, string why)
         {
-            vSuite.TermRequest r = VTerm.DropForFirst(mgr, "open-host");
+            // a Terminal module on a bar: in its drop-down; none: in a vTerm window (no placement given), not dropping out of a bar
+            vSuite.TermRequest r = VTerm.HasTerminalModule(mgr) ? VTerm.DropForFirst(mgr, "open-host") : new vSuite.TermRequest { Cmd = "open-host" };
             r.Host = host ?? "";
             r.Name = name;
             r.User = user;

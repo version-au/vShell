@@ -11,6 +11,11 @@ Build with build.cmd, run dist\vShell.exe. Your existing settings are migrated: 
 7. **Temperatures** - CPU/Memory/GPU module -> "Show temperature". NVIDIA GPU works without HWiNFO; CPU/RAM need HWiNFO (see README "HWiNFO and temperatures").
 8. **HWiNFO sensor module** - add "HWiNFO sensor", pick a reading, try Style = Line with a range (e.g. 30 to 95 for a temperature).
 
+## 0.38.256 - Open shell without a Terminal module opens a window
+1. Take every Terminal module off your bars. Right-click a Proxmox guest > Open shell (or a vDeploy container / host): vTerm opens
+   its own window with the SSH tab - nothing slides out of a bar.
+2. Put a Terminal module back on a bar and do it again: the shell opens in the drop-down from that bar, as before.
+
 ## 0.38.256 - Proxmox plugin: the popup follows Show
 1. A Proxmox bar module with Show = Guests: click it. The popup has the cluster name, "GUESTS  n/m running" and the guests only -
    no NODES or STORAGE. With "Hide stopped guests" ticked the stopped ones aren't listed (the heading still counts them); with a

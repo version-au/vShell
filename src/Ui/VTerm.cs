@@ -205,6 +205,14 @@ namespace vShell.Ui
 
         static string Hex(Color c) { return "#" + c.A.ToString("X2") + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2"); }
 
+        /// <summary>Is there a Terminal module on any bar? (Without one there's no drop-down to open things in - "Open shell" uses a vTerm window.)</summary>
+        public static bool HasTerminalModule(BarManager mgr)
+        {
+            foreach (BarWindow b in mgr.BarWindows)
+                foreach (TerminalModule t in b.Terminals) return true;
+            return false;
+        }
+
         /// <summary>The bar and Terminal module the drop-down comes from when it isn't a module asking (Open shell, the palette): the first bar
         /// with a Terminal module, else the first bar.</summary>
         public static vSuite.TermRequest DropForFirst(BarManager mgr, string cmd)
